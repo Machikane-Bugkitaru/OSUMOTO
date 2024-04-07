@@ -6,7 +6,7 @@ import {
   ImageMessage,
 } from '@line/bot-sdk';
 import { load } from 'ts-dotenv';
-import { ask } from './gpt';
+import { ask, generateImageByDalle } from './openai';
 import { generateArt } from './stable-diffusion';
 
 const env = load({
@@ -39,7 +39,7 @@ const textEventHandler = async (event: WebhookEvent): Promise<MessageAPIResponse
 
   let response: TextMessage | ImageMessage;
   if (text.startsWith(`${channelBotName}画伯`)) {
-    response = await useStableDiffusion(text.replace(`${channelBotName}画伯`, "").trim())
+    response = await useDalle(text.replace(`${channelBotName}画伯`, "").trim())
   } else {
     response = await useChatGpt(userId, groupId, text)
   }
@@ -52,6 +52,12 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
 
   // chatGPTに投げる
   let res = await ask(`${senderName}:${text}`)
+  if (!res) {
+    return {
+      type: 'text',
+      text: "エラーでちゃ"
+    };
+  }
 
   // 回答文を加工
   if (new RegExp(`^${channelBotName}[:：]*`).test(res)) {
@@ -60,6 +66,18 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
   return {
     type: 'text',
     text: res.trim()
+  };
+}
+
+const useDalle = async (prompt: string): Promise<ImageMessage | TextMessage> => {
+  const imageUrl = await generateImageByDalle(prompt);
+  return imageUrl === null ? {
+    type: 'text',
+    text: 'なんか失敗しちゃ'
+  } : {
+    type: 'image',
+    originalContentUrl: encodeURI(imageUrl),
+    previewImageUrl: encodeURI(imageUrl)
   };
 }
 
