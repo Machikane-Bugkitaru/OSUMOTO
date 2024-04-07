@@ -1,12 +1,13 @@
 import { OpenAI } from "openai";
 import { load } from 'ts-dotenv';
+import { uploadImage } from "./google";
 const env = load({
   OPENAI_API_KEY: String,
   SYSTEM_SETTINGS: String,
 });
 
 const openai = new OpenAI({
-  apiKey: process.env['OPENAI_API_KEY']
+  apiKey: env.OPENAI_API_KEY
 });
 const systemSettings = env.SYSTEM_SETTINGS
 
@@ -62,12 +63,21 @@ export async function generateImageByDalle(prompt: string): Promise<string | nul
       prompt: prompt, // 生成したい画像を文字で表したもの
       n: 1, // 生成する画像の数 DALL-E 3ではn=1のみサポートされています
       size: "1024x1024", // 生成する画像のサイズ DALL-E 3では1024x1024、1792x1024、1024x1792から選べます
+      response_format: "b64_json"
     });
-
+    
     // 画像のURLを取得 data[0]のように配列で取得する必要がある
-    const imageUrl = imageResponse.data[0].url;
+    const imageBase64 = imageResponse.data[0].b64_json;
+    console.log(imageBase64);
+    
+    if (!imageBase64) {
+      console.error("generateImageByDalle: レスポンスのb64_jsonが空です");
+      return null
+    }
+    const imageUrl = await uploadImage(`${new Date().toLocaleString()} ${prompt.substring(0, 10)}`, imageBase64)
     return imageUrl || null
   } catch (error) {
+    console.error(`generateImageByDalle: ${error}`); 
     return null
   }
 }

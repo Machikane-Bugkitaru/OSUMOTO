@@ -31,6 +31,7 @@ export const uploadImage = async (fileName: string, base64Data: string) => {
   const response = await drive.files.create(params);
   const { status, statusText } = response;
   if (status < 200 || status >= 400) {
+    console.error(`uploadImage: status=${status}, message=${statusText}`);
     throw new Error(`status: ${status}, message: ${statusText}`);
   }
   return `https://drive.google.com/uc?id=${response.data.id}`
