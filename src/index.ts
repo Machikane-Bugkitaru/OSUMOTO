@@ -3,7 +3,7 @@ import { middleware, WebhookEvent } from '@line/bot-sdk';
 import { lineBotConfig, textEventHandler } from './line';
 
 import { load } from 'ts-dotenv';
-import { checkAsk } from './gpt';
+import { checkAsk } from './openai';
 import { checkGenerateArt, generateArt } from './stable-diffusion';
 import { uploadImage } from './google';
 const env = load({
