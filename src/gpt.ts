@@ -30,7 +30,7 @@ export async function ask(content: string): Promise<string> {
       ],
     });
 
-    return completion.data!.choices[0]!.message!.content
+    return completion.data!.choices[0]!.message!.content || ''
   } catch (error: any) {
     if (!error && error.response) {
       return `${error.response.status}, ${error.response.data}`;
