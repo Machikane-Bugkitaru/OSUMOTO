@@ -50,7 +50,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 - Uses `openai@6.8.1` with modern `chat.completions.create()` API
 - Model configurable via `OPENAI_MODEL` env variable (default: `gpt-5-nano`)
-- Maintains conversation context in `pastMessages` array (max 3 messages)
+- Maintains conversation context in `pastMessages` array (configurable via `MESSAGE_HISTORY_LIMIT`, default: 10 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
 - `ask()` function sends messages and maintains context
 
@@ -77,6 +77,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - `CHANNEL_BOT_NAME` - Prefix for bot activation in group chat
 - `OPENAI_API_KEY` - OpenAI API key
 - `OPENAI_MODEL` - OpenAI model name (e.g., `gpt-5-nano`, `gpt-4o-mini`)
+- `MESSAGE_HISTORY_LIMIT` - Maximum number of conversation messages to retain (default: 10)
 - `STABILITY_API_KEY` - Stability AI API key
 - `PORT` - Server port (default: 3000)
 - `SYSTEM_SETTINGS` - ChatGPT system prompt for personality/behavior
@@ -92,7 +93,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 **Conversation Context**:
 
-- ChatGPT maintains last 3 user messages in memory (`pastMessages` array)
+- ChatGPT maintains conversation history in `pastMessages` array (configurable via `MESSAGE_HISTORY_LIMIT`, default: 10)
 - Context is shared globally across all groups/users (potential improvement area)
 - Sender names are cached per group in `groupMemberMap`
 

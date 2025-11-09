@@ -4,6 +4,10 @@ const env = load({
   OPENAI_API_KEY: String,
   OPENAI_MODEL: String,
   SYSTEM_SETTINGS: String,
+  MESSAGE_HISTORY_LIMIT: {
+    type: Number,
+    default: 10,
+  },
 });
 
 const openai = new OpenAI({
@@ -18,7 +22,7 @@ type Message = {
 const pastMessages: Message[] = [];
 
 export async function ask(content: string): Promise<string> {
-  if (pastMessages.length > 3) {
+  if (pastMessages.length >= env.MESSAGE_HISTORY_LIMIT) {
     pastMessages.shift();
   }
   pastMessages.push({ role: 'user', content: content });
@@ -39,7 +43,7 @@ export async function ask(content: string): Promise<string> {
 }
 
 export async function checkAsk(content: string) {
-  if (pastMessages.length > 2) {
+  if (pastMessages.length >= env.MESSAGE_HISTORY_LIMIT) {
     pastMessages.shift();
   }
   pastMessages.push({ role: 'user', content: content });
