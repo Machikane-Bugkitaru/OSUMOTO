@@ -77,13 +77,42 @@ yarn build
 
 `dist/`ディレクトリに TypeScript をコンパイルした結果が出力されます。
 
-## リリース方法
+## デプロイ
 
-### Vercel へのデプロイ
+### Vercel への自動デプロイ（推奨）
 
-このプロジェクトでは Vercel に手動でデプロイします。
+このプロジェクトは Vercel と GitHub を連携して自動デプロイされます。
 
-#### 本番環境へのデプロイ
+#### 初回セットアップ
+
+1. [Vercel](https://vercel.com) にログインし、GitHub リポジトリを接続
+2. プロジェクト設定で以下の環境変数を設定:
+   - `CHANNEL_ACCESS_TOKEN`
+   - `CHANNEL_SECRET`
+   - `CHANNEL_BOT_NAME`
+   - `OPENAI_API_KEY`
+   - `OPENAI_MODEL`
+   - `MESSAGE_HISTORY_LIMIT`
+   - `STABILITY_API_KEY`
+   - `SYSTEM_SETTINGS`
+3. `credentials.json`の内容を環境変数として設定（必要に応じて）
+
+#### デプロイフロー
+
+- **本番デプロイ**: `main`ブランチへのプッシュまたはマージで自動デプロイ
+- **プレビューデプロイ**: プルリクエスト作成時に自動でプレビュー環境を作成
+
+#### ビルド設定
+
+`vercel.json`で以下が設定されています:
+
+- ビルドコマンド: `yarn build`
+- 出力ディレクトリ: `dist/`
+- インストールコマンド: `yarn install`
+
+### 手動デプロイ
+
+Vercel CLI を使用した手動デプロイも可能です:
 
 ```bash
 yarn run deploy:prod
@@ -99,8 +128,7 @@ yarn run deploy:prod
 
 1. すべての変更をコミット
 2. `yarn ts-check`が成功すること（pre-commit フックで自動実行）
-3. `.env`の環境変数が設定されていること
-4. `credentials.json`の内容が設定されていること（必要に応じて）
+3. Vercel プロジェクトの環境変数が設定されていること
 
 ## ライセンス
 
