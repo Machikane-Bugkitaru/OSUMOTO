@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { EasyInputMessage } from 'openai/resources/responses/responses';
 import { load } from 'ts-dotenv';
 const env = load({
   OPENAI_API_KEY: String,
@@ -10,29 +11,33 @@ const env = load({
   },
 });
 
-const openai = new OpenAI({
+const client = new OpenAI({
   apiKey: env.OPENAI_API_KEY || '',
 });
 const systemSettings = env.SYSTEM_SETTINGS;
 
-type Message = {
-  role: 'user' | 'system' | 'assistant';
-  content: string;
-};
-const pastMessages: Message[] = [];
+const pastMessages: EasyInputMessage[] = [];
 
 export async function ask(content: string): Promise<string> {
+  // メッセージ履歴の制限を超えた場合、最も古いメッセージを削除
   if (pastMessages.length >= env.MESSAGE_HISTORY_LIMIT) {
     pastMessages.shift();
   }
+  // ユーザーメッセージを履歴に追加
   pastMessages.push({ role: 'user', content: content });
   try {
-    const completion = await openai.chat.completions.create({
+    // AIに問い合わせ
+    const response = await client.responses.create({
       model: env.OPENAI_MODEL,
-      messages: [{ role: 'system', content: systemSettings }, ...pastMessages],
+      input: [{ role: 'developer', content: systemSettings }, ...pastMessages],
     });
 
-    return completion.choices[0]?.message?.content || '';
+    // AIの応答を履歴に追加
+    const assistantMessage = response.output_text;
+    pastMessages.push({ role: 'assistant', content: assistantMessage });
+
+    // 応答を返す
+    return assistantMessage;
   } catch (error: any) {
     if (error?.response) {
       return `${error.response.status}, ${error.response.data}`;
