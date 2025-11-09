@@ -48,7 +48,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 **[src/gpt.ts](src/gpt.ts)** - OpenAI ChatGPT integration
 
-- Uses `openai@3.2.1` (older version - `createChatCompletion` API)
+- Uses `openai@6.8.1` with modern `chat.completions.create()` API
+- Model configurable via `OPENAI_MODEL` env variable (default: `gpt-5-nano`)
 - Maintains conversation context in `pastMessages` array (max 3 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
 - `ask()` function sends messages and maintains context
@@ -75,6 +76,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - `CHANNEL_SECRET` - LINE Bot channel secret
 - `CHANNEL_BOT_NAME` - Prefix for bot activation in group chat
 - `OPENAI_API_KEY` - OpenAI API key
+- `OPENAI_MODEL` - OpenAI model name (e.g., `gpt-5-nano`, `gpt-4o-mini`)
 - `STABILITY_API_KEY` - Stability AI API key
 - `PORT` - Server port (default: 3000)
 - `SYSTEM_SETTINGS` - ChatGPT system prompt for personality/behavior
