@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OSUMOTO is a LINE bot for group chats that integrates ChatGPT and Stable Diffusion image generation. The bot responds when messages start with a configured bot name (`CHANNEL_BOT_NAME`).
 
-## ≈
+## Commands
 
 ### Local Development
 
@@ -48,7 +48,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 **[src/gpt.ts](src/gpt.ts)** - OpenAI ChatGPT integration
 
-- Uses `openai@6.8.1` with modern `chat.completions.create()` API
+- Uses `openai@6.8.1` with modern Responses API (`responses.create()`)
 - Model configurable via `OPENAI_MODEL` env variable (default: `gpt-5-nano`)
 - Maintains conversation context in `pastMessages` array (configurable via `MESSAGE_HISTORY_LIMIT`, default: 10 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
