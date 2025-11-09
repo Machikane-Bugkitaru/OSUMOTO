@@ -41,11 +41,3 @@ export async function ask(content: string): Promise<string> {
     }
   }
 }
-
-export async function checkAsk(content: string) {
-  if (pastMessages.length >= env.MESSAGE_HISTORY_LIMIT) {
-    pastMessages.shift();
-  }
-  pastMessages.push({ role: 'user', content: content });
-  return [{ role: 'system', content: systemSettings }, ...pastMessages];
-}
