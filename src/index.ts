@@ -12,17 +12,20 @@ const PORT = env.PORT || 3000;
 
 const app: Application = express();
 
-app.get('/', async (req: Request, res: Response) => {
-  const message = await ask('Hello');
-  res.send(message);
-});
+// ローカルのみ有効
+if (process.env.NODE_ENV === 'local') {
+  app.get('/', async (req: Request, res: Response) => {
+    const message = await ask('Hello');
+    res.send(message);
+  });
 
-app.get('/image', async (req: Request, res: Response) => {
-  const prompt =
-    'a dog walking on the beach with sunglasses, portrait, ultra realistic, futuristic background , concept art, intricate details, highly detailed';
-  const imageUrl = await checkGenerateArt(prompt);
-  res.send(encodeURI(imageUrl));
-});
+  app.get('/image', async (req: Request, res: Response) => {
+    const prompt =
+      'a dog walking on the beach with sunglasses, portrait, ultra realistic, futuristic background , concept art, intricate details, highly detailed';
+    const imageUrl = await checkGenerateArt(prompt);
+    res.send(encodeURI(imageUrl));
+  });
+}
 
 app.post(
   '/webhook',

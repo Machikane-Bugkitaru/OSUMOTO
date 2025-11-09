@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "NODE_ENV=local nodemon src/index.ts",
     "build": "rimraf dist && tsc",
     "ts-check": "tsc --project tsconfig.json",
     "deploy:prod": "rimraf dist && tsc && vercel --prod",
