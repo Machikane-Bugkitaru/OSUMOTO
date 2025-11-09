@@ -1,52 +1,48 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from 'openai';
+import { EasyInputMessage } from 'openai/resources/responses/responses';
 import { load } from 'ts-dotenv';
 const env = load({
   OPENAI_API_KEY: String,
+  OPENAI_MODEL: String,
   SYSTEM_SETTINGS: String,
+  MESSAGE_HISTORY_LIMIT: {
+    type: Number,
+    default: 10,
+  },
 });
 
-const openai = new OpenAIApi(new Configuration({
+const client = new OpenAI({
   apiKey: env.OPENAI_API_KEY || '',
-}));
-const systemSettings = env.SYSTEM_SETTINGS
+});
+const systemSettings = env.SYSTEM_SETTINGS;
 
-type Message = {
-  role: "user" | "system" | "assistant";
-  content: string;
-};
-const pastMessages: Message[] = [];
+const pastMessages: EasyInputMessage[] = [];
 
 export async function ask(content: string): Promise<string> {
-  if (pastMessages.length > 3) {
-    pastMessages.shift()
+  // メッセージ履歴の制限を超えた場合、最も古いメッセージを削除
+  if (pastMessages.length >= env.MESSAGE_HISTORY_LIMIT) {
+    pastMessages.shift();
   }
-  pastMessages.push({role: "user", content: content});
+  // ユーザーメッセージを履歴に追加
+  pastMessages.push({ role: 'user', content: content });
   try {
-    const completion = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {role: "system", content: systemSettings},
-        ...pastMessages,
-      ],
+    // AIに問い合わせ
+    const response = await client.responses.create({
+      model: env.OPENAI_MODEL,
+      input: [{ role: 'developer', content: systemSettings }, ...pastMessages],
     });
 
-    return completion.data!.choices[0]!.message!.content
+    // AIの応答を履歴に追加
+    const assistantMessage = response.output_text;
+    pastMessages.push({ role: 'assistant', content: assistantMessage });
+
+    // 応答を返す
+    return assistantMessage;
   } catch (error: any) {
-    if (!error && error.response) {
+    if (error?.response) {
       return `${error.response.status}, ${error.response.data}`;
     } else {
-      return `${error.type}, ${error.message}`;
-    };
-  };
-};
-
-export async function checkAsk(content: string) {
-  if (pastMessages.length > 2) {
-    pastMessages.shift()
+      return `${error?.type || 'Error'}, ${error?.message || 'Unknown error'}`;
+    }
   }
-  pastMessages.push({role: "user", content: content});
-  return [
-    {role: "system", content: systemSettings},
-    ...pastMessages,
-  ]
 }

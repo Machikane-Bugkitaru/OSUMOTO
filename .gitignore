@@ -132,3 +132,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .vercel
+
+# vscode
+.DS_Store
