@@ -145,3 +145,29 @@ test('対象外の発言・個別チャットでは画像 API と返信を呼ば
   await textEventHandler(event('こんにちは'));
   await textEventHandler(event('BOT画伯 猫', 'user'));
 });
+
+test('LINEのgroupIdをチャット履歴のキーとして渡す', async () => {
+  let reply;
+  const { textEventHandler } = loadModule('line.ts', {
+    '@line/bot-sdk': {
+      Client: class {
+        async getGroupMemberProfile() {
+          return { displayName: '太郎' };
+        }
+        async replyMessage(_token, message) {
+          reply = message;
+        }
+      },
+    },
+    './image': { generateArt: () => assert.fail('画像を生成してはいけない') },
+    './gpt': {
+      ask: async (groupId, text) => {
+        assert.equal(groupId, 'group-id');
+        assert.equal(text, '太郎:BOTこんにちは');
+        return 'こんにちは';
+      },
+    },
+  });
+  await textEventHandler(event('BOTこんにちは'));
+  assert.deepEqual(reply, { type: 'text', text: 'こんにちは' });
+});
