@@ -1,4 +1,4 @@
-export type Message = { role: 'user' | 'assistant'; content: string; imageId?: string };
+export type Message = { role: 'user' | 'assistant'; content: string; imageUrl?: string };
 type Conversation = {
   messages: Message[];
   tail: Promise<void>;
@@ -11,6 +11,7 @@ type HistoryOptions = {
   maxGroups?: number;
   ttlMs?: number;
   now?: () => number;
+  maxImageBytes?: number;
 };
 
 export function createConversationHistory({
@@ -18,6 +19,7 @@ export function createConversationHistory({
   maxGroups = 1000,
   ttlMs = 30 * 60 * 1000,
   now = Date.now,
+  maxImageBytes = 64 * 1024 * 1024,
 }: HistoryOptions) {
   if (!Number.isSafeInteger(limit) || limit < 0) {
     throw new Error('MESSAGE_HISTORY_LIMIT は0以上の整数を指定してください。');
@@ -32,7 +34,7 @@ export function createConversationHistory({
       .slice(-retainedLimit)
       .reverse()
       .map((message) => {
-        if (!message.imageId || ++images <= 2) return message;
+        if (!message.imageUrl || ++images <= 2) return message;
         return { role: message.role, content: '[画像（参照対象の直近2枚より前）]' };
       })
       .reverse();
@@ -80,7 +82,7 @@ export function createConversationHistory({
   const ask = (
     groupId: string,
     content: string | (() => Promise<string>),
-    respond: (messages: Message[], invalidateImage: (imageId: string) => void) => Promise<string>,
+    respond: (messages: Message[]) => Promise<string>,
   ) =>
     withConversation(groupId, async (current) => {
       const question: Message = {
@@ -88,29 +90,53 @@ export function createConversationHistory({
         content: typeof content === 'string' ? content : await content(),
       };
       const messages = retainedLimit === 0 ? [question] : bound([...current.messages, question]);
-      const reply = await respond(messages, (imageId) => {
-        // 取得不能な画像で再送後の会話まで失敗し続けないよう、参照だけを無効化する。
-        current.messages = current.messages.map((message) =>
-          message.imageId === imageId
-            ? { role: message.role, content: '[画像（取得できません。画像を送り直してください）]' }
-            : message,
-        );
-      });
+      const reply = await respond(messages);
       if (!reply.trim()) throw new Error('回答が空でした。');
-      current.messages = bound([...messages, { role: 'assistant', content: reply }]);
+      current.messages = bound([
+        ...current.messages,
+        question,
+        { role: 'assistant', content: reply },
+      ]);
       return reply;
     });
 
-  const rememberImage = (groupId: string, imageId?: string) =>
+  const rememberImage = (groupId: string, image: string | (() => Promise<string>) | undefined) =>
     withConversation(groupId, async (current) => {
+      if (retainedLimit === 0) return;
+      let imageUrl: string | undefined;
+      try {
+        imageUrl = typeof image === 'function' ? await image() : image;
+      } catch {
+        // 受信時の取得失敗は質問時に再取得せず、画像再送で復帰できる履歴として残す。
+      }
       current.messages = bound([
         ...current.messages,
         {
           role: 'user',
-          content: imageId ? '[画像]' : '[画像（読み取り未対応。画像を送り直してください）]',
-          imageId,
+          content: imageUrl ? '[画像]' : '[画像（取得できません。画像を送り直してください）]',
+          imageUrl,
         },
       ]);
+
+      // 2枚×グループ数で画像本体の保持量が増え続けないよう、プロセス全体にも上限を設ける。
+      current.lastUsed = now();
+      const groups = [...conversations.values()];
+      let size = groups.reduce(
+        (total, group) =>
+          total +
+          group.messages.reduce((bytes, message) => bytes + (message.imageUrl?.length ?? 0), 0),
+        0,
+      );
+      for (const group of groups.sort((a, b) => a.lastUsed - b.lastUsed)) {
+        group.messages = group.messages.map((message) => {
+          if (size <= maxImageBytes || !message.imageUrl) return message;
+          size -= message.imageUrl.length;
+          return {
+            role: message.role,
+            content: '[画像（保持容量を超えたため削除。画像を送り直してください）]',
+          };
+        });
+      }
     });
 
   return Object.assign(ask, { rememberImage });

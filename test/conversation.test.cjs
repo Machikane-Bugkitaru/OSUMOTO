@@ -100,7 +100,7 @@ test('直近10件の新しい画像2枚だけを残し、順序と画像メッ�
   await ask('a', '説明して', async (messages) => {
     assert.equal(messages.length, 4);
     assert.deepEqual(
-      messages.filter((m) => m.imageId).map((m) => m.imageId),
+      messages.filter((m) => m.imageUrl).map((m) => m.imageUrl),
       ['middle', 'new'],
     );
     assert.match(messages[0].content, /直近2枚より前/);
@@ -108,7 +108,7 @@ test('直近10件の新しい画像2枚だけを残し、順序と画像メッ�
   });
   await ask('b', '説明して', async (messages) => {
     assert.equal(
-      messages.some((m) => m.imageId),
+      messages.some((m) => m.imageUrl),
       false,
     );
     return '別グループ';
@@ -121,13 +121,13 @@ test('10件の窓の外から画像を補充せず、ちょうど境界の画像
   for (let i = 0; i < 4; i += 1) await ask('a', '質問', async () => '回答');
   await ask('a', '境界', async (messages) => {
     assert.equal(messages.length, 10);
-    assert.equal(messages[0].imageId, 'image');
+    assert.equal(messages[0].imageUrl, 'image');
     return '回答';
   });
   await ask('a', '窓の外', async (messages) => {
     assert.equal(messages.length, 10);
     assert.equal(
-      messages.some((m) => m.imageId),
+      messages.some((m) => m.imageUrl),
       false,
     );
     return '回答';
@@ -148,7 +148,7 @@ test('名前取得を待つ質問に後から来た画像が割り込まない',
     },
     async (messages) => {
       assert.equal(
-        messages.some((m) => m.imageId),
+        messages.some((m) => m.imageUrl),
         false,
       );
       return '回答';
@@ -158,7 +158,7 @@ test('名前取得を待つ質問に後から来た画像が割り込まない',
   release();
   await Promise.all([question, image]);
   await ask('a', '次の質問', async (messages) => {
-    assert.equal(messages.at(-2).imageId, 'later');
+    assert.equal(messages.at(-2).imageUrl, 'later');
     return '回答';
   });
 });
@@ -171,10 +171,73 @@ test('履歴無効・期限切れの場合は画像も残さない', async () =>
     time = 10;
     await ask('a', '質問', async (messages) => {
       assert.equal(
-        messages.some((m) => m.imageId),
+        messages.some((m) => m.imageUrl),
         false,
       );
       return '回答';
     });
   }
+});
+
+test('画像の受信処理が終わるまで後続の質問を待ち、以後は本体を再利用する', async () => {
+  const ask = createConversationHistory({ limit: 10 });
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const image = ask.rememberImage('a', async () => {
+    await gate;
+    return 'data:image/png;base64,AAAA';
+  });
+  let called = false;
+  const question = ask('a', '質問', async (messages) => {
+    called = true;
+    assert.equal(messages[0].imageUrl, 'data:image/png;base64,AAAA');
+    return '回答';
+  });
+  await Promise.resolve();
+  assert.equal(called, false);
+  release();
+  await Promise.all([image, question]);
+});
+
+test('プロセス全体の画像保持容量を超えると参照を解放し再送案内を残す', async () => {
+  const ask = createConversationHistory({ limit: 10, maxImageBytes: 5 });
+  await ask.rememberImage('a', 'AAAA');
+  await ask.rememberImage('b', 'BBBB');
+  await ask('a', '質問', async (messages) => {
+    assert.equal(
+      messages.some((m) => m.imageUrl),
+      false,
+    );
+    assert.match(messages[0].content, /保持容量/);
+    return '回答';
+  });
+  await ask('b', '質問', async (messages) => {
+    assert.equal(messages[0].imageUrl, 'BBBB');
+    return '回答';
+  });
+});
+
+test('回答待ちの間に容量上限で解放した画像を、回答完了時に復活させない', async () => {
+  const ask = createConversationHistory({ limit: 10, maxImageBytes: 5 });
+  await ask.rememberImage('a', 'AAAA');
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const question = ask('a', '質問', async () => {
+    await gate;
+    return '回答';
+  });
+  await ask.rememberImage('b', 'BBBB');
+  release();
+  await question;
+  await ask('a', '次の質問', async (messages) => {
+    assert.equal(
+      messages.some((m) => m.imageUrl),
+      false,
+    );
+    return '回答';
+  });
 });

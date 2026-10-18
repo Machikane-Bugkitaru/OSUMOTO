@@ -55,8 +55,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - Uses `src/conversation.ts` for per-group history and serial processing (default: 10 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
 - `ask(groupId, content)` sends messages and maintains context; content may be a deferred sender-name lookup to preserve queue order
-- `rememberImage(groupId, imageId)` records a received LINE image without replying
-- `src/line-image.ts` retrieves selected images on demand (10s / 8MiB each), and `src/image-input.ts` builds multimodal input; failed references are invalidated
+- `rememberImage(groupId, imageId)` loads and records a received LINE image in process memory without replying
+- `src/line-image.ts` retrieves images once at reception (10s / 8MiB each), and `src/image-input.ts` builds multimodal input from memory; total retained data URLs are capped at 64MiB
 
 **[src/image.ts](src/image.ts)** - OpenAI image generation integration
 
