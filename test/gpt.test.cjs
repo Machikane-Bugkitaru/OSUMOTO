@@ -64,3 +64,76 @@ test('APIの詳細エラーはLINE向けの案内に変換し、失敗した会�
   assert.doesNotMatch(failure, /private API error detail/);
   assert.equal(await ask('a', '次の発言'), '成功');
 });
+
+test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を参照する', async () => {
+  const reads = [];
+  const { ask, rememberImage } = loadModule('gpt.ts', {
+    './line-image': {
+      ImageUnavailableError: class extends Error {},
+      readLineImage: async (id) => {
+        reads.push(id);
+        return `data:image/png;base64,${id}`;
+      },
+    },
+    openai: class {
+      constructor() {
+        this.responses = {
+          create: async (request) => {
+            const images = request.input.flatMap((m) =>
+              Array.isArray(m.content) ? m.content.filter((p) => p.type === 'input_image') : [],
+            );
+            assert.deepEqual(
+              images.map((p) => p.image_url),
+              ['data:image/png;base64,third'],
+            );
+            return { output_text: '画像の回答' };
+          },
+        };
+      }
+    },
+  });
+  for (const id of ['first', 'second', 'third']) await rememberImage('images', id);
+  assert.equal(await ask('images', '何が写ってる？'), '画像の回答');
+  assert.equal(await ask('images', 'もう少し詳しく'), '画像の回答');
+  assert.deepEqual(reads, ['first', 'second', 'third']);
+});
+
+test('受信時の画像取得失敗を履歴で案内し、再送後はメモリの画像だけで回答する', async () => {
+  let reads = 0;
+  const { ask, rememberImage } = loadModule('gpt.ts', {
+    './line-image': {
+      readLineImage: async (id) => {
+        reads += 1;
+        if (id === 'expired') throw new Error('fetch failed');
+        return 'data:image/png;base64,resent';
+      },
+    },
+    openai: class {
+      constructor() {
+        this.responses = {
+          create: async (request) => {
+            const images = request.input.flatMap((m) =>
+              Array.isArray(m.content) ? m.content.filter((p) => p.type === 'input_image') : [],
+            );
+            if (images.length === 0) {
+              assert.ok(
+                request.input.some(
+                  (m) => typeof m.content === 'string' && m.content.includes('送り直してください'),
+                ),
+              );
+              return { output_text: '画像を送り直してください。' };
+            }
+            assert.equal(images.length, 1);
+            return { output_text: '復帰' };
+          },
+        };
+      }
+    },
+  });
+  await rememberImage('recovery', 'expired');
+  assert.match(await ask('recovery', '何が写ってる？'), /送り直して/);
+  await rememberImage('recovery', 'resent');
+  assert.equal(await ask('recovery', '何が写ってる？'), '復帰');
+  assert.equal(await ask('recovery', 'もう一度'), '復帰');
+  assert.equal(reads, 2);
+});

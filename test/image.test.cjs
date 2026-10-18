@@ -293,7 +293,7 @@ test('LINEのgroupIdをチャット履歴のキーとして渡す', async () => 
     './gpt': {
       ask: async (groupId, text) => {
         assert.equal(groupId, 'group-id');
-        assert.equal(text, '太郎:BOTこんにちは');
+        assert.equal(await text(), '太郎:BOTこんにちは');
         return 'こんにちは';
       },
     },

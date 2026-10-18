@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import { load } from 'ts-dotenv';
 import { createConversationHistory } from './conversation';
+import { toImageInput } from './image-input';
+import { readLineImage } from './line-image';
 import { webSearchInstructions } from './web-search';
 const env = load({
   OPENAI_API_KEY: String,
@@ -19,7 +21,13 @@ const systemSettings = [env.SYSTEM_SETTINGS, webSearchInstructions].join('\n\n')
 
 const withHistory = createConversationHistory({ limit: env.MESSAGE_HISTORY_LIMIT });
 
-export async function ask(groupId: string, content: string): Promise<string> {
+export const rememberImage = (groupId: string, messageId?: string) =>
+  withHistory.rememberImage(groupId, messageId ? () => readLineImage(messageId) : undefined);
+
+export async function ask(
+  groupId: string,
+  content: string | (() => Promise<string>),
+): Promise<string> {
   try {
     return await withHistory(groupId, content, async (messages) => {
       const response = await client.responses.create({
@@ -27,7 +35,7 @@ export async function ask(groupId: string, content: string): Promise<string> {
         service_tier: 'priority',
         tools: [{ type: 'web_search' }],
         tool_choice: 'auto',
-        input: [{ role: 'developer', content: systemSettings }, ...messages],
+        input: [{ role: 'developer', content: systemSettings }, ...toImageInput(messages)],
       });
       return response.output_text;
     });
