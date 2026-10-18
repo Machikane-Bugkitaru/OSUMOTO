@@ -1,6 +1,6 @@
 import { Stream } from 'node:stream';
 import path from 'path';
-import { google } from "googleapis";
+import { google } from 'googleapis';
 
 export const uploadImage = async (fileName: string, base64Data: string) => {
   const auth = new google.auth.GoogleAuth({
@@ -11,21 +11,21 @@ export const uploadImage = async (fileName: string, base64Data: string) => {
       'https://www.googleapis.com/auth/drive.appdata',
     ],
   });
-  const drive = google.drive({version: 'v3', auth});
+  const drive = google.drive({ version: 'v3', auth });
 
   const bs = new Stream.PassThrough();
-  bs.end(Buffer.from(base64Data, "base64"));
+  bs.end(Buffer.from(base64Data, 'base64'));
 
   const params = {
-      resource: {
-          name: fileName,
-          parents: ['1lLo7CG0ZdhTooWsAsC2NEs34QEUb8UgZ']
-      },
-      media: {
-          mimeType: 'image/png',
-          body: bs,
-      },
-      fields: 'id'
+    resource: {
+      name: fileName,
+      parents: ['1lLo7CG0ZdhTooWsAsC2NEs34QEUb8UgZ'],
+    },
+    media: {
+      mimeType: 'image/png',
+      body: bs,
+    },
+    fields: 'id',
   };
 
   // 画像生成後も LINE の返信に間に合うよう、保存リクエストの待機時間と自動再試行を制限する。
@@ -34,5 +34,5 @@ export const uploadImage = async (fileName: string, base64Data: string) => {
   if (status < 200 || status >= 400) {
     throw new Error(`status: ${status}, message: ${statusText}`);
   }
-  return `https://drive.google.com/uc?id=${response.data.id}`
-}
+  return `https://drive.google.com/uc?id=${response.data.id}`;
+};

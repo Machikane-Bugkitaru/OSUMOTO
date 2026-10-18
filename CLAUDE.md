@@ -18,7 +18,8 @@ yarn dev                # Start development server with hot reload (uses nodemon
 
 ```bash
 yarn build             # Clean dist folder and compile TypeScript
-yarn ts-check          # Type check without building (runs on pre-commit hook)
+yarn ts-check          # Type check without emitting files (runs on pre-commit hook)
+yarn verify            # Lint, formatting check, tests, type check, build
 ```
 
 ### Deployment
@@ -104,7 +105,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 - Hosted on Vercel (serverless)
 - TypeScript compiled to `dist/` directory
-- Pre-commit hook runs `ts-check` to validate types
+- Pre-commit hook runs lint, format check, and type check
+- GitHub Actions runs `yarn verify` on pull requests and main pushes
 
 ## Package Manager
 

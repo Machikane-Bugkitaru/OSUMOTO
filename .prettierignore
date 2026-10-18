@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vercel/
+.claude/
+.env*
+credentials.json
+credentials.json.example
+public/
+yarn.lock

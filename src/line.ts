@@ -20,17 +20,19 @@ const lineBotConfig = {
   channelAccessToken: env.CHANNEL_ACCESS_TOKEN || '',
   channelSecret: env.CHANNEL_SECRET || '',
 };
-const channelBotName = env.CHANNEL_BOT_NAME || "BOT";
+const channelBotName = env.CHANNEL_BOT_NAME || 'BOT';
 
 const lineClient = new Client(lineBotConfig);
 const groupMemberMap = new Map<string, string>();
 
-const textEventHandler = async (event: WebhookEvent): Promise<MessageAPIResponseBase | undefined> => {
+const textEventHandler = async (
+  event: WebhookEvent,
+): Promise<MessageAPIResponseBase | undefined> => {
   if (event.type !== 'message' || event.message.type !== 'text') return;
 
   // groupチャットでなければ、return
   if (event.source.type !== 'group') return;
-  const {userId, groupId } = event.source;
+  const { userId, groupId } = event.source;
   if (!userId) return;
 
   const { text } = event.message;
@@ -39,9 +41,9 @@ const textEventHandler = async (event: WebhookEvent): Promise<MessageAPIResponse
 
   let response: TextMessage | ImageMessage;
   if (text.startsWith(`${channelBotName}画伯`)) {
-    response = await useImageGeneration(text.replace(`${channelBotName}画伯`, "").trim())
+    response = await useImageGeneration(text.replace(`${channelBotName}画伯`, '').trim());
   } else {
-    response = await useChatGpt(userId, groupId, text)
+    response = await useChatGpt(userId, groupId, text);
   }
   await lineClient.replyMessage(event.replyToken, response);
 };
@@ -51,7 +53,7 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
   const senderName = await extractSenderName(userId, groupId);
 
   // chatGPTに投げる
-  let res = await ask(`${senderName}:${text}`)
+  let res = await ask(`${senderName}:${text}`);
 
   // 回答文を加工
   if (new RegExp(`^${channelBotName}[:：]*`).test(res)) {
@@ -59,9 +61,9 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
   }
   return {
     type: 'text',
-    text: res.trim()
+    text: res.trim(),
   };
-}
+};
 
 const useImageGeneration = async (prompt: string): Promise<ImageMessage | TextMessage> => {
   if (!prompt) {
@@ -100,15 +102,12 @@ const extractSenderName = async (userId: string, groupId: string) => {
 
   await lineClient
     .getGroupMemberProfile(groupId, userId)
-    .then( profile => {
+    .then((profile) => {
       if (profile) groupMemberMap.set(userId, profile.displayName);
     })
-    .catch( err => console.error(err) );
+    .catch((err) => console.error(err));
 
   return groupMemberMap.get(userId);
-}
+};
 
-export {
-  lineBotConfig,
-  textEventHandler
-}
+export { lineBotConfig, textEventHandler };

@@ -38,7 +38,7 @@ export const generateArt = async (prompt: string): Promise<string> => {
 };
 
 export const checkGenerateArt = async (prompt: string) => {
-  const content = fs.readFileSync(path.join(__dirname, '../public/images/sample.png'))
-  const imageUrl = await uploadImage(prompt.substring(0, 10), content.toString('base64'))
+  const content = fs.readFileSync(path.join(__dirname, '../public/images/sample.png'));
+  const imageUrl = await uploadImage(prompt.substring(0, 10), content.toString('base64'));
   return imageUrl;
-}
+};
