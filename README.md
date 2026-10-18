@@ -66,6 +66,11 @@ LINE の返信期限を考慮し、画像生成は40秒、Google Drive のアッ
 画像生成機能を使用する場合、Google Drive API の認証情報が必要です。
 `credentials.json.example`を参考に、`credentials.json`を作成してください。
 
+Vercel では `GOOGLE_CREDENTIALS_JSON` にサービスアカウントの JSON 全体を登録し、種類を Secret、対象を Production にして再デプロイします。
+この環境変数を優先し、未設定の場合だけローカルの `credentials.json` を使用します。
+設定した JSON が不正な場合はファイルに切り替えず、設定エラーとして扱います。
+認証情報を Git に追加する必要はありません。
+
 ## 開発
 
 ### ローカル開発サーバーの起動
