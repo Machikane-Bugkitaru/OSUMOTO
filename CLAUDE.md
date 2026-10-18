@@ -60,7 +60,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 - Uses `images.generate()` with `OPENAI_IMAGE_MODEL` (default: `gpt-image-2.5-flare`)
 - Generates one 1024x1024 PNG at `low` quality using the existing `OPENAI_API_KEY`
-- Image generation times out after 40 seconds with no retries; Drive upload requests time out after 10 seconds with no retries (OAuth authentication time is not included)
+- Prepares the image prompt using `OPENAI_MODEL`, optional `web_search`, and the shared search policy in `src/web-search.ts`
+- Prompt preparation and image generation share a 40-second budget with no retries; Drive upload requests time out after 10 seconds with no retries (OAuth authentication time is not included)
 - Empty prompts and generation/upload failures return a text reply to LINE
 - Generated images are base64-encoded and uploaded to Google Drive
 - `checkGenerateArt()` is a test function that uploads sample.png

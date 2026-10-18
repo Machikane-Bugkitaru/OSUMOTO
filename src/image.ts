@@ -3,9 +3,11 @@ import path from 'path';
 import OpenAI from 'openai';
 import { load } from 'ts-dotenv';
 import { uploadImage } from './google';
+import { webSearchInstructions } from './web-search';
 
 const env = load({
   OPENAI_API_KEY: String,
+  OPENAI_MODEL: String,
   OPENAI_IMAGE_MODEL: {
     type: String,
     default: 'gpt-image-2.5-flare',
@@ -20,16 +22,39 @@ const client = new OpenAI({
 });
 
 export const generateArt = async (prompt: string): Promise<string> => {
-  let stage: 'generation' | 'response' | 'storage' = 'generation';
+  let stage: 'preparation' | 'generation' | 'response' | 'storage' = 'preparation';
   try {
-    const response = await client.images.generate({
-      model: env.OPENAI_IMAGE_MODEL,
-      prompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'low',
-      output_format: 'png',
+    const deadline = Date.now() + 40_000;
+    const preparation = await client.responses.create({
+      model: env.OPENAI_MODEL,
+      tools: [{ type: 'web_search' }],
+      tool_choice: 'auto',
+      input: [
+        {
+          role: 'developer',
+          content: `${webSearchInstructions}\n\nユーザーの依頼を画像生成用のプロンプトにしてください。必要なら検索で確認した情報を反映し、元の被写体・構図・画風・指定文字を保ってください。検索が不要なら元の依頼をそのまま返してください。出力は画像生成用のプロンプトだけにしてください。`,
+        },
+        { role: 'user', content: prompt },
+      ],
     });
+    const imagePrompt = preparation.output_text.trim();
+    if (!imagePrompt) throw new Error('画像生成用のプロンプトが返されませんでした。');
+
+    // 検索の追加で LINE の返信期限を圧迫しないよう、生成には残り時間だけを割り当てる。
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) throw new Error('画像生成の制限時間を超えました。');
+    stage = 'generation';
+    const response = await client.images.generate(
+      {
+        model: env.OPENAI_IMAGE_MODEL,
+        prompt: imagePrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'low',
+        output_format: 'png',
+      },
+      { timeout: remainingMs },
+    );
 
     stage = 'response';
     const image = response.data?.[0]?.b64_json;

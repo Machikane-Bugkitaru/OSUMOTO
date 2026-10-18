@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { load } from 'ts-dotenv';
 import { createConversationHistory } from './conversation';
+import { webSearchInstructions } from './web-search';
 const env = load({
   OPENAI_API_KEY: String,
   OPENAI_MODEL: String,
@@ -14,7 +15,7 @@ const env = load({
 const client = new OpenAI({
   apiKey: env.OPENAI_API_KEY || '',
 });
-const systemSettings = env.SYSTEM_SETTINGS;
+const systemSettings = [env.SYSTEM_SETTINGS, webSearchInstructions].join('\n\n');
 
 const withHistory = createConversationHistory({ limit: env.MESSAGE_HISTORY_LIMIT });
 
@@ -24,6 +25,8 @@ export async function ask(groupId: string, content: string): Promise<string> {
       const response = await client.responses.create({
         model: env.OPENAI_MODEL,
         service_tier: 'priority',
+        tools: [{ type: 'web_search' }],
+        tool_choice: 'auto',
         input: [{ role: 'developer', content: systemSettings }, ...messages],
       });
       return response.output_text;

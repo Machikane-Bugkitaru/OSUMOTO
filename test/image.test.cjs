@@ -2,18 +2,79 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { loadModule } = require('./helpers.cjs');
 
-function imageModule(generate, upload) {
+function imageModule(
+  generate,
+  upload,
+  prepare = async (request) => ({ output_text: request.input[1].content }),
+) {
   return loadModule('image.ts', {
     openai: class {
       constructor(options) {
         assert.equal(options.maxRetries, 0);
         assert.equal(options.timeout, 40_000);
         this.images = { generate };
+        this.responses = { create: prepare };
       }
     },
     './google': { uploadImage: upload },
   });
 }
+
+test('画像生成前に任意の検索を有効にし、確認した描写を画像モデルに渡す', async () => {
+  const { webSearchInstructions } = require('../src/web-search');
+  const { generateArt } = imageModule(
+    async (request, options) => {
+      assert.equal(request.prompt, '確認した最新の外観を描く');
+      assert.ok(options.timeout > 0 && options.timeout <= 40_000);
+      return { data: [{ b64_json: 'cG5n' }] };
+    },
+    async () => 'https://example.com/generated.png',
+    async (request) => {
+      assert.equal(request.model, 'test-model');
+      assert.deepEqual(request.tools, [{ type: 'web_search' }]);
+      assert.equal(request.tool_choice, 'auto');
+      assert.equal(request.service_tier, undefined);
+      assert.ok(request.input[0].content.startsWith(webSearchInstructions + '\n\n'));
+      assert.equal(request.input[1].content, '最新の外観を調べて描いて');
+      return { output_text: '確認した最新の外観を描く' };
+    },
+  );
+  assert.equal(await generateArt('最新の外観を調べて描いて'), 'https://example.com/generated.png');
+});
+
+test('検索準備の失敗や空のプロンプトでは画像を生成しない', async () => {
+  for (const prepare of [
+    async () => {
+      throw new Error('preparation failed');
+    },
+    async () => ({ output_text: '  ' }),
+  ]) {
+    const { generateArt } = imageModule(
+      () => assert.fail('生成してはいけない'),
+      () => assert.fail('保存してはいけない'),
+      prepare,
+    );
+    await assert.rejects(generateArt('猫'));
+  }
+});
+
+test('検索準備で制限時間を使い切った場合は画像を生成しない', async () => {
+  const originalNow = Date.now;
+  const { generateArt } = imageModule(
+    () => assert.fail('生成してはいけない'),
+    () => assert.fail('保存してはいけない'),
+    async () => {
+      Date.now = () => 40_001;
+      return { output_text: '猫' };
+    },
+  );
+  Date.now = () => 0;
+  try {
+    await assert.rejects(generateArt('猫'), /制限時間/);
+  } finally {
+    Date.now = originalNow;
+  }
+});
 
 test('OpenAI の PNG を既存の保存処理に渡し、保存先 URL を返す', async () => {
   const { generateArt } = imageModule(
