@@ -5,12 +5,14 @@ import { lineBotConfig, textEventHandler } from './line';
 import { load } from 'ts-dotenv';
 import { ask } from './gpt';
 import { checkGenerateArt } from './image';
+import { createEventDeduplicator } from './deduplication';
 const env = load({
   PORT: String,
 });
 const PORT = env.PORT || 3000;
 
 export const app: Application = express();
+const processOnce = createEventDeduplicator();
 
 // ローカルのみ有効
 if (process.env.NODE_ENV === 'local') {
@@ -39,9 +41,11 @@ app.post(
 
     // 一件の失敗で他のイベントの完了を待たずに応答しないよう、全結果を集約する。
     const results = await Promise.allSettled(
-      req.body.events.map(async (event: WebhookEvent) => {
-        await textEventHandler(event);
-      }),
+      req.body.events.map((event: WebhookEvent & { webhookEventId?: string }) =>
+        processOnce(event.webhookEventId, async () => {
+          await textEventHandler(event);
+        }),
+      ),
     );
     const failed = results.some((result) => result.status === 'rejected');
     for (const [index, result] of results.entries()) {

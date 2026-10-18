@@ -86,3 +86,22 @@ test('署名が不正なリクエストと不正なeventsを拒否する', async
     },
   );
 });
+
+test('HTTP再配信と同一バッチ内の重複でイベント処理を繰り返さない', async () => {
+  let count = 0;
+  await withServer(
+    async () => {
+      count += 1;
+    },
+    async (send) => {
+      const event = { type: 'message', webhookEventId: 'event-1' };
+      const first = await send([event, event]);
+      assert.equal(first.status, 200);
+      await first.text();
+      const repeated = await send([event]);
+      assert.equal(repeated.status, 200);
+      await repeated.text();
+    },
+  );
+  assert.equal(count, 1);
+});

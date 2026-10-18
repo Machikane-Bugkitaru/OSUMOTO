@@ -99,7 +99,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 - Conversation history is isolated per group; completed user/assistant pairs respect `MESSAGE_HISTORY_LIMIT` (default: 10)
 - History is process-local, expires after 30 idle minutes, and is capped at 1,000 groups
-- Restarts and separate Vercel instances do not share history
+- Webhook event IDs share one result per process until one hour after completion, including failures; up to 10,000 IDs are retained
+- Restarts and separate Vercel instances do not share history or deduplication state
 - Sender names are cached per group in `groupMemberMap`
 
 **Deployment**:
