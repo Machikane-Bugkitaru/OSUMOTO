@@ -181,6 +181,31 @@ test('生成・保存の失敗は例外で終わらず、LINE に案内を返す
   assert.match(reply.text, /画像を生成できませんでした/);
 });
 
+for (const code of ['moderation_blocked', 'invalid_value', undefined]) {
+  test(`HTTP 400でもmoderation_blockedだけ専用の返信を返す: ${code}`, async () => {
+    let reply;
+    const error = new Error('API error details');
+    error.status = 400;
+    error.code = code;
+    const { textEventHandler } = lineModule(
+      async () => {
+        throw error;
+      },
+      async (_, message) => {
+        reply = message;
+      },
+    );
+    await textEventHandler(event('BOT画伯 猫'));
+    assert.deepEqual(reply, {
+      type: 'text',
+      text:
+        code === 'moderation_blocked'
+          ? 'あかんプロンプトみたいや。他ので試してくれや。'
+          : '画像を生成できませんでした。内容を変えるか、少し待ってからもう一度お試しください。',
+    });
+  });
+}
+
 test('対象外の発言・個別チャットでは画像 API と返信を呼ばない', async () => {
   const { textEventHandler } = lineModule(
     () => assert.fail('生成してはいけない'),
