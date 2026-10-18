@@ -41,10 +41,10 @@ app.post(
           }
           return res.status(500);
         }
-      })
+      }),
     );
     return res.status(200);
-  }
+  },
 );
 
 app.listen(PORT);

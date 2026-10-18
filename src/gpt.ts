@@ -39,6 +39,7 @@ export async function ask(content: string): Promise<string> {
 
     // 応答を返す
     return assistantMessage;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- エラー形式の変更は #12 の履歴管理修正でまとめて扱う。
   } catch (error: any) {
     if (error?.response) {
       return `${error.response.status}, ${error.response.data}`;

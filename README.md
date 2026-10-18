@@ -22,8 +22,11 @@ OpenAI の `gpt-image-2.5-flare` で画像生成し、Google Drive にアップ�
 
 ### 1. 依存関係のインストール
 
+Node.js 24（`.node-version`）と Yarn 1.22.22 を使用します。
+
 ```bash
-yarn install
+corepack enable
+yarn install --frozen-lockfile
 ```
 
 ### 2. 環境変数の設定
@@ -83,7 +86,21 @@ yarn test
 yarn ts-check
 ```
 
-TypeScript の型チェックのみを実行します（pre-commit フックでも自動実行されます）。
+ファイルを出力せず、TypeScript の型チェックのみを実行します。
+
+### コード検査と整形
+
+```bash
+yarn lint          # ESLint で TypeScript・テスト・設定の問題を検出
+yarn format        # Prettier で整形
+yarn format:check  # 整形済みか検査
+yarn verify        # lint・整形検査・テスト・型チェック・ビルド
+```
+
+ESLint はコード検査、Prettier は整形を担当し、`eslint-config-prettier` で規則の衝突を避けます。
+pre-commit フックは lint・整形検査・型チェックを実行します。
+GitHub Actions は PR と main への push で `yarn verify` を実行します。
+テストは外部 API を呼ばず、LINE・OpenAI・Google の秘密情報なしで実行できます。
 
 ## ビルド
 
