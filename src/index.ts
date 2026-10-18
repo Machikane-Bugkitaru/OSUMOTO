@@ -15,7 +15,7 @@ export const app: Application = express();
 // ローカルのみ有効
 if (process.env.NODE_ENV === 'local') {
   app.get('/', async (req: Request, res: Response) => {
-    const message = await ask('Hello');
+    const message = await ask('local', 'Hello');
     res.send(message);
   });
 

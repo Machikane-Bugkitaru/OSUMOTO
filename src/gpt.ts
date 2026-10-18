@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
-import { EasyInputMessage } from 'openai/resources/responses/responses';
 import { load } from 'ts-dotenv';
+import { createConversationHistory } from './conversation';
 const env = load({
   OPENAI_API_KEY: String,
   OPENAI_MODEL: String,
@@ -16,35 +16,22 @@ const client = new OpenAI({
 });
 const systemSettings = env.SYSTEM_SETTINGS;
 
-const pastMessages: EasyInputMessage[] = [];
+const withHistory = createConversationHistory({ limit: env.MESSAGE_HISTORY_LIMIT });
 
-export async function ask(content: string): Promise<string> {
-  // メッセージ履歴の制限を超えた場合、最も古いメッセージを削除
-  if (pastMessages.length >= env.MESSAGE_HISTORY_LIMIT) {
-    pastMessages.shift();
-  }
-  // ユーザーメッセージを履歴に追加
-  pastMessages.push({ role: 'user', content: content });
+export async function ask(groupId: string, content: string): Promise<string> {
   try {
-    // AIに問い合わせ
-    const response = await client.responses.create({
-      model: env.OPENAI_MODEL,
-      service_tier: 'priority',
-      input: [{ role: 'developer', content: systemSettings }, ...pastMessages],
+    return await withHistory(groupId, content, async (messages) => {
+      const response = await client.responses.create({
+        model: env.OPENAI_MODEL,
+        service_tier: 'priority',
+        input: [{ role: 'developer', content: systemSettings }, ...messages],
+      });
+      return response.output_text;
     });
-
-    // AIの応答を履歴に追加
-    const assistantMessage = response.output_text;
-    pastMessages.push({ role: 'assistant', content: assistantMessage });
-
-    // 応答を返す
-    return assistantMessage;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- エラー形式の変更は #12 の履歴管理修正でまとめて扱う。
-  } catch (error: any) {
-    if (error?.response) {
-      return `${error.response.status}, ${error.response.data}`;
-    } else {
-      return `${error?.type || 'Error'}, ${error?.message || 'Unknown error'}`;
-    }
+  } catch (error: unknown) {
+    console.error('チャット応答に失敗しました', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return '回答を生成できませんでした。少し待ってからもう一度お試しください。';
   }
 }

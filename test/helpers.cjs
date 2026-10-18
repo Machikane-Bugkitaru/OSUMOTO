@@ -5,6 +5,9 @@ const { load } = require('ts-dotenv');
 
 const env = {
   OPENAI_API_KEY: 'test-key',
+  OPENAI_MODEL: 'test-model',
+  SYSTEM_SETTINGS: 'test settings',
+  MESSAGE_HISTORY_LIMIT: '10',
   CHANNEL_ACCESS_TOKEN: 'test-token',
   CHANNEL_SECRET: 'test-secret',
   CHANNEL_BOT_NAME: 'BOT',

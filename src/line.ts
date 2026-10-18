@@ -53,7 +53,7 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
   const senderName = await extractSenderName(userId, groupId);
 
   // chatGPTに投げる
-  let res = await ask(`${senderName}:${text}`);
+  let res = await ask(groupId, `${senderName}:${text}`);
 
   // 回答文を加工
   if (new RegExp(`^${channelBotName}[:：]*`).test(res)) {

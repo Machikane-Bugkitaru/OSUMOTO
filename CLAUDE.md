@@ -52,9 +52,9 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - Uses `openai@6.8.1` with modern Responses API (`responses.create()`)
 - Requests Fast mode via `service_tier: "priority"` (2x standard pricing)
 - Model configured via the required `OPENAI_MODEL` env variable (`gpt-6-luna` in `.env.example`)
-- Maintains conversation context in `pastMessages` array (configurable via `MESSAGE_HISTORY_LIMIT`, default: 10 messages)
+- Uses `src/conversation.ts` for per-group history and serial processing (default: 10 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
-- `ask()` function sends messages and maintains context
+- `ask(groupId, content)` sends messages and maintains context
 
 **[src/image.ts](src/image.ts)** - OpenAI image generation integration
 
@@ -97,8 +97,9 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 **Conversation Context**:
 
-- ChatGPT maintains conversation history in `pastMessages` array (configurable via `MESSAGE_HISTORY_LIMIT`, default: 10)
-- Context is shared globally across all groups/users (potential improvement area)
+- Conversation history is isolated per group; completed user/assistant pairs respect `MESSAGE_HISTORY_LIMIT` (default: 10)
+- History is process-local, expires after 30 idle minutes, and is capped at 1,000 groups
+- Restarts and separate Vercel instances do not share history
 - Sender names are cached per group in `groupMemberMap`
 
 **Deployment**:
