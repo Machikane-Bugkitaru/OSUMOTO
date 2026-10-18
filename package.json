@@ -16,15 +16,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nakano-Fandao/OSUMOTO.git"
+    "url": "git+https://github.com/Machikane-Bugkitaru/OSUMOTO.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Nakano-Fandao/OSUMOTO/issues"
+    "url": "https://github.com/Machikane-Bugkitaru/OSUMOTO/issues"
   },
-  "homepage": "https://github.com/Nakano-Fandao/OSUMOTO#readme",
+  "homepage": "https://github.com/Machikane-Bugkitaru/OSUMOTO#readme",
   "dependencies": {
     "@line/bot-sdk": "^7.5.2",
     "config": "^3.3.9",
