@@ -64,3 +64,70 @@ test('APIの詳細エラーはLINE向けの案内に変換し、失敗した会�
   assert.doesNotMatch(failure, /private API error detail/);
   assert.equal(await ask('a', '次の発言'), '成功');
 });
+
+test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を参照する', async () => {
+  const reads = [];
+  const { ask, rememberImage } = loadModule('gpt.ts', {
+    './line-image': {
+      ImageUnavailableError: class extends Error {},
+      readLineImage: async (id) => {
+        reads.push(id);
+        return `data:image/png;base64,${id}`;
+      },
+    },
+    openai: class {
+      constructor() {
+        this.responses = {
+          create: async (request) => {
+            const images = request.input.flatMap((m) =>
+              Array.isArray(m.content) ? m.content.filter((p) => p.type === 'input_image') : [],
+            );
+            assert.deepEqual(
+              images.map((p) => p.image_url),
+              ['data:image/png;base64,second', 'data:image/png;base64,third'],
+            );
+            return { output_text: '画像の回答' };
+          },
+        };
+      }
+    },
+  });
+  for (const id of ['first', 'second', 'third']) await rememberImage('images', id);
+  assert.equal(await ask('images', '何が写ってる？'), '画像の回答');
+  assert.equal(await ask('images', 'もう少し詳しく'), '画像の回答');
+  assert.deepEqual(reads, ['second', 'third', 'second', 'third']);
+});
+
+test('取得できない画像は再送案内の後に無効化され、1枚の再送で復帰する', async () => {
+  class Unavailable extends Error {}
+  let calls = 0;
+  const { ask, rememberImage } = loadModule('gpt.ts', {
+    './line-image': {
+      ImageUnavailableError: Unavailable,
+      readLineImage: async (id) => {
+        if (id === 'expired') throw new Unavailable();
+        return 'data:image/png;base64,resent';
+      },
+    },
+    openai: class {
+      constructor() {
+        this.responses = {
+          create: async (request) => {
+            calls += 1;
+            const images = request.input.flatMap((m) =>
+              Array.isArray(m.content) ? m.content.filter((p) => p.type === 'input_image') : [],
+            );
+            assert.equal(images.length, 1);
+            return { output_text: '復帰' };
+          },
+        };
+      }
+    },
+  });
+  await rememberImage('recovery', 'expired');
+  assert.match(await ask('recovery', '何が写ってる？'), /送り直して/);
+  assert.equal(calls, 0);
+  await rememberImage('recovery', 'resent');
+  assert.equal(await ask('recovery', '何が写ってる？'), '復帰');
+  assert.equal(calls, 1);
+});

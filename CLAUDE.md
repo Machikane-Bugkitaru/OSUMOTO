@@ -54,7 +54,9 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - Model configured via the required `OPENAI_MODEL` env variable (`gpt-6-luna` in `.env.example`)
 - Uses `src/conversation.ts` for per-group history and serial processing (default: 10 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
-- `ask(groupId, content)` sends messages and maintains context
+- `ask(groupId, content)` sends messages and maintains context; content may be a deferred sender-name lookup to preserve queue order
+- `rememberImage(groupId, imageId)` records a received LINE image without replying
+- `src/line-image.ts` retrieves selected images on demand (10s / 8MiB each), and `src/image-input.ts` builds multimodal input; failed references are invalidated
 
 **[src/image.ts](src/image.ts)** - OpenAI image generation integration
 
@@ -98,7 +100,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 **Conversation Context**:
 
-- Conversation history is isolated per group; completed user/assistant pairs respect `MESSAGE_HISTORY_LIMIT` (default: 10)
+- Conversation history is isolated per group; text turns and received images respect `MESSAGE_HISTORY_LIMIT` (default and maximum: 10); image inputs use only the latest two images inside that window
 - History is process-local, expires after 30 idle minutes, and is capped at 1,000 groups
 - Webhook event IDs share one result per process until one hour after completion, including failures; up to 10,000 IDs are retained
 - Restarts and separate Vercel instances do not share history or deduplication state

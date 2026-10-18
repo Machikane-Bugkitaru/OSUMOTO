@@ -6,7 +6,7 @@ import {
   ImageMessage,
 } from '@line/bot-sdk';
 import { load } from 'ts-dotenv';
-import { ask } from './gpt';
+import { ask, rememberImage } from './gpt';
 import { generateArt } from './image';
 
 const env = load({
@@ -29,12 +29,21 @@ const moderationBlockedMessage = 'あかんプロンプトみたいや。他の�
 const textEventHandler = async (
   event: WebhookEvent,
 ): Promise<MessageAPIResponseBase | undefined> => {
-  if (event.type !== 'message' || event.message.type !== 'text') return;
+  if (event.type !== 'message') return;
 
   // groupチャットでなければ、return
   if (event.source.type !== 'group') return;
   const { userId, groupId } = event.source;
   if (!userId) return;
+
+  if (event.message.type === 'image') {
+    await rememberImage(
+      groupId,
+      event.message.contentProvider.type === 'line' ? event.message.id : undefined,
+    );
+    return;
+  }
+  if (event.message.type !== 'text') return;
 
   const { text } = event.message;
   // 冒頭がbotの名前でなければ、return
@@ -50,11 +59,8 @@ const textEventHandler = async (
 };
 
 const useChatGpt = async (userId: string, groupId: string, text: string): Promise<TextMessage> => {
-  // 直前の送信者の名前を抽出
-  const senderName = await extractSenderName(userId, groupId);
-
-  // chatGPTに投げる
-  let res = await ask(groupId, `${senderName}:${text}`);
+  // 名前取得中に後続画像が先の発言へ割り込まないよう、履歴キュー内で名前を取得する。
+  let res = await ask(groupId, async () => `${await extractSenderName(userId, groupId)}:${text}`);
 
   // 回答文を加工
   if (new RegExp(`^${channelBotName}[:：]*`).test(res)) {
