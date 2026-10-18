@@ -21,7 +21,6 @@ const client = new OpenAI({
 
 export const generateArt = async (prompt: string): Promise<string> => {
   let stage: 'generation' | 'response' | 'storage' = 'generation';
-  const startedAt = Date.now();
   try {
     const response = await client.images.generate({
       model: env.OPENAI_IMAGE_MODEL,
@@ -56,22 +55,12 @@ export const generateArt = async (prompt: string): Promise<string> => {
               typeof response.status === 'number'
             ? response.status
             : undefined,
-      durationMs: Date.now() - startedAt,
-      credentialsConfigured: Boolean(process.env.GOOGLE_CREDENTIALS_JSON),
       providerCode:
         'code' in details &&
         typeof details.code === 'string' &&
         /^[a-z][a-z0-9_]{0,63}$/.test(details.code)
           ? details.code
           : undefined,
-      parameter:
-        'param' in details &&
-        typeof details.param === 'string' &&
-        ['model', 'prompt', 'n', 'size', 'quality', 'output_format'].includes(details.param)
-          ? details.param
-          : undefined,
-      safetyRejected:
-        error instanceof Error && /safety|moderation|content policy/i.test(error.message),
     });
     throw error;
   }
