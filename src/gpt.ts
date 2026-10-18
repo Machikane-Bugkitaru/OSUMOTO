@@ -17,7 +17,14 @@ const env = load({
 const client = new OpenAI({
   apiKey: env.OPENAI_API_KEY || '',
 });
-const systemSettings = [env.SYSTEM_SETTINGS, webSearchInstructions].join('\n\n');
+const lineReplyInstructions = `返信は Markdown に対応していない LINE のトーク画面に表示されます。以下の形式を守ってください。
+- プレーンテキストで回答し、Markdown の見出し、強調、表、引用、コードブロック、インラインコードは使わないでください。
+- 読みやすさは短い段落と改行で整えてください。列挙が必要なら「・」や「1.」を使ってください。
+- リンクや出典は Markdown のリンク記法にせず、改行して URL だけを独立した行に書いてください。URL を括弧やバッククォートで囲んだり、同じ行に説明や句読点を付けたりしないでください。
+- リンクの説明が必要なら、URL の前の行に書いてください。`;
+const systemSettings = [env.SYSTEM_SETTINGS, webSearchInstructions, lineReplyInstructions].join(
+  '\n\n',
+);
 
 const withHistory = createConversationHistory({ limit: env.MESSAGE_HISTORY_LIMIT });
 
