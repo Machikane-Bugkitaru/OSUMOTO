@@ -65,8 +65,12 @@ for (const stage of ['generation', 'storage']) {
     class ProviderError extends Error {}
     const error = new ProviderError('secret-message');
     error.config = { headers: { Authorization: 'secret-token' } };
-    if (stage === 'generation') error.status = 403;
-    else error.response = { status: 401, data: 'secret-response' };
+    if (stage === 'generation') {
+      error.status = 403;
+      error.code = 'moderation_blocked';
+      error.param = 'prompt';
+      error.message = 'Request rejected by the safety system: secret-message';
+    } else error.response = { status: 401, data: 'secret-response' };
     const { generateArt } = imageModule(
       async () => {
         if (stage === 'generation') throw error;
@@ -88,6 +92,12 @@ for (const stage of ['generation', 'storage']) {
     assert.equal(logs[0][1].stage, stage);
     assert.equal(logs[0][1].errorType, 'ProviderError');
     assert.equal(logs[0][1].status, stage === 'generation' ? 403 : 401);
+    assert.equal(
+      logs[0][1].providerCode,
+      stage === 'generation' ? 'moderation_blocked' : undefined,
+    );
+    assert.equal(logs[0][1].parameter, stage === 'generation' ? 'prompt' : undefined);
+    assert.equal(logs[0][1].safetyRejected, stage === 'generation');
     assert.doesNotMatch(JSON.stringify(logs), /secret-/);
   });
 }
