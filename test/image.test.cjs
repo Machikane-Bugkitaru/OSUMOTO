@@ -60,6 +60,38 @@ test('API エラーを画像データとして保存しない', async () => {
   await assert.rejects(generateArt('猫'), error);
 });
 
+for (const stage of ['generation', 'storage']) {
+  test(`${stage} の失敗工程とステータスを記録し、秘密情報を記録しない`, async () => {
+    class ProviderError extends Error {}
+    const error = new ProviderError('secret-message');
+    error.config = { headers: { Authorization: 'secret-token' } };
+    if (stage === 'generation') error.status = 403;
+    else error.response = { status: 401, data: 'secret-response' };
+    const { generateArt } = imageModule(
+      async () => {
+        if (stage === 'generation') throw error;
+        return { data: [{ b64_json: 'cG5n' }] };
+      },
+      async () => {
+        throw error;
+      },
+    );
+    const logs = [];
+    const originalError = console.error;
+    console.error = (...args) => logs.push(args);
+    try {
+      await assert.rejects(generateArt('secret-prompt'), (actual) => actual === error);
+    } finally {
+      console.error = originalError;
+    }
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0][1].stage, stage);
+    assert.equal(logs[0][1].errorType, 'ProviderError');
+    assert.equal(logs[0][1].status, stage === 'generation' ? 403 : 401);
+    assert.doesNotMatch(JSON.stringify(logs), /secret-/);
+  });
+}
+
 const event = (text, source = 'group') => ({
   type: 'message',
   replyToken: 'reply-token',

@@ -20,21 +20,47 @@ const client = new OpenAI({
 });
 
 export const generateArt = async (prompt: string): Promise<string> => {
-  const response = await client.images.generate({
-    model: env.OPENAI_IMAGE_MODEL,
-    prompt,
-    n: 1,
-    size: '1024x1024',
-    quality: 'low',
-    output_format: 'png',
-  });
+  let stage: 'generation' | 'response' | 'storage' = 'generation';
+  const startedAt = Date.now();
+  try {
+    const response = await client.images.generate({
+      model: env.OPENAI_IMAGE_MODEL,
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'low',
+      output_format: 'png',
+    });
 
-  const image = response.data?.[0]?.b64_json;
-  if (!image) {
-    throw new Error('OpenAI から画像データが返されませんでした。');
+    stage = 'response';
+    const image = response.data?.[0]?.b64_json;
+    if (!image) {
+      throw new Error('OpenAI から画像データが返されませんでした。');
+    }
+
+    stage = 'storage';
+    return await uploadImage(prompt.substring(0, 10), image);
+  } catch (error: unknown) {
+    const details = typeof error === 'object' && error !== null ? error : {};
+    const response = 'response' in details ? details.response : undefined;
+    // SDK の name は API エラーでも Error になる。例外全体や本文には認証情報を含みうる。
+    console.error('画像処理に失敗しました', {
+      stage,
+      errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
+      status:
+        'status' in details && typeof details.status === 'number'
+          ? details.status
+          : typeof response === 'object' &&
+              response !== null &&
+              'status' in response &&
+              typeof response.status === 'number'
+            ? response.status
+            : undefined,
+      durationMs: Date.now() - startedAt,
+      credentialsConfigured: Boolean(process.env.GOOGLE_CREDENTIALS_JSON),
+    });
+    throw error;
   }
-
-  return uploadImage(prompt.substring(0, 10), image);
 };
 
 export const checkGenerateArt = async (prompt: string) => {
