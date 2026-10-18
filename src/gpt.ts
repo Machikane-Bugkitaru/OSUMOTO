@@ -29,6 +29,7 @@ export async function ask(content: string): Promise<string> {
     // AIに問い合わせ
     const response = await client.responses.create({
       model: env.OPENAI_MODEL,
+      service_tier: 'priority',
       input: [{ role: 'developer', content: systemSettings }, ...pastMessages],
     });
 

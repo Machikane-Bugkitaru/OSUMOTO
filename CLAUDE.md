@@ -49,7 +49,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 **[src/gpt.ts](src/gpt.ts)** - OpenAI ChatGPT integration
 
 - Uses `openai@6.8.1` with modern Responses API (`responses.create()`)
-- Model configurable via `OPENAI_MODEL` env variable (default: `gpt-5-nano`)
+- Requests Fast mode via `service_tier: "priority"` (2x standard pricing)
+- Model configured via the required `OPENAI_MODEL` env variable (`gpt-6-luna` in `.env.example`)
 - Maintains conversation context in `pastMessages` array (configurable via `MESSAGE_HISTORY_LIMIT`, default: 10 messages)
 - System settings configured via `SYSTEM_SETTINGS` env variable
 - `ask()` function sends messages and maintains context
@@ -76,7 +77,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - `CHANNEL_SECRET` - LINE Bot channel secret
 - `CHANNEL_BOT_NAME` - Prefix for bot activation in group chat
 - `OPENAI_API_KEY` - OpenAI API key
-- `OPENAI_MODEL` - OpenAI model name (e.g., `gpt-5-nano`, `gpt-4o-mini`)
+- `OPENAI_MODEL` - OpenAI model name (configured as `gpt-6-luna` in `.env.example`)
 - `MESSAGE_HISTORY_LIMIT` - Maximum number of conversation messages to retain (default: 10)
 - `STABILITY_API_KEY` - Stability AI API key
 - `PORT` - Server port (default: 3000)
