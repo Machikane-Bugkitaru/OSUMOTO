@@ -28,7 +28,8 @@ export const uploadImage = async (fileName: string, base64Data: string) => {
       fields: 'id'
   };
 
-  const response = await drive.files.create(params);
+  // 画像生成後も LINE の返信に間に合うよう、保存リクエストの待機時間と自動再試行を制限する。
+  const response = await drive.files.create(params, { timeout: 10_000, retry: false });
   const { status, statusText } = response;
   if (status < 200 || status >= 400) {
     throw new Error(`status: ${status}, message: ${statusText}`);

@@ -13,7 +13,9 @@ OpenAI API は Fast モード（`service_tier: "priority"`）を指定します�
 
 ### 画像生成 AI
 
-Stable Diffusion で画像生成し、Google Drive にアップロードして返します。
+OpenAI の `gpt-image-2.5-flare` で画像生成し、Google Drive にアップロードして返します。
+画質は `low`、サイズは 1024×1024、形式は PNG、1回につき1枚です。
+画像生成は通常処理を使用し、チャット用の Fast モード指定は適用しません。
 文頭に「`CHANNEL_BOT_NAME`画伯」をつけて、続けてプロンプトを入力します。
 
 ## セットアップ
@@ -37,15 +39,20 @@ CHANNEL_BOT_NAME=<任意のボット名>
 # OpenAI設定
 OPENAI_API_KEY=<OpenAI APIキー>
 OPENAI_MODEL=gpt-6-luna
+OPENAI_IMAGE_MODEL=gpt-image-2.5-flare # 省略時もこのモデルを使用
 MESSAGE_HISTORY_LIMIT=<会話履歴の保持件数（デフォルト: 10）>
 SYSTEM_SETTINGS=<ChatGPTのシステムプロンプト（任意）>
-
-# Stability AI設定
-STABILITY_API_KEY=<Stability AI APIキー>
 
 # サーバー設定
 PORT=<ポート番号（デフォルト: 3000）>
 ```
+
+画像生成にも既存の `OPENAI_API_KEY` を使用します。`STABILITY_API_KEY` は不要です。
+Vercel でも既存の OpenAI API キーが利用でき、`OPENAI_IMAGE_MODEL` の追加設定は任意です。
+GPT Image の利用には、OpenAI 側で組織の確認が必要な場合があります。
+
+LINE の返信期限を考慮し、画像生成は40秒、Google Drive のアップロード要求は10秒でタイムアウトします（事前の認証時間は含みません）。
+自動再試行は行わず、生成や保存に失敗した場合は LINE に案内を返します。
 
 ### 3. Google Drive 認証情報の設定
 
@@ -61,6 +68,14 @@ yarn dev
 ```
 
 nodemon によるホットリロード付きで開発サーバーが起動します。
+
+### テスト
+
+```bash
+yarn test
+```
+
+画像 API と LINE の接続部分を外部通信なしで確認します。
 
 ### 型チェック
 

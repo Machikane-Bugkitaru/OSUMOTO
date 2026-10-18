@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OSUMOTO is a LINE bot for group chats that integrates ChatGPT and Stable Diffusion image generation. The bot responds when messages start with a configured bot name (`CHANNEL_BOT_NAME`).
+OSUMOTO is a LINE bot for group chats that integrates ChatGPT and OpenAI image generation. The bot responds when messages start with a configured bot name (`CHANNEL_BOT_NAME`).
 
 ## Commands
 
@@ -42,7 +42,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 - Handles webhook events from LINE
 - Filters for group chat messages starting with `CHANNEL_BOT_NAME`
-- Routes requests to either ChatGPT (default) or Stable Diffusion (when message starts with `{CHANNEL_BOT_NAME}画伯`)
+- Routes requests to either ChatGPT (default) or OpenAI image generation (when message starts with `{CHANNEL_BOT_NAME}画伯`)
 - Manages group member profile caching in `groupMemberMap`
 - Returns TextMessage or ImageMessage responses
 
@@ -55,10 +55,12 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - System settings configured via `SYSTEM_SETTINGS` env variable
 - `ask()` function sends messages and maintains context
 
-**[src/stable-diffusion.ts](src/stable-diffusion.ts)** - Stability AI integration
+**[src/image.ts](src/image.ts)** - OpenAI image generation integration
 
-- Generates images via Stability AI API (engine: `stable-diffusion-v1-5`)
-- Uses negative prompts to improve quality
+- Uses `images.generate()` with `OPENAI_IMAGE_MODEL` (default: `gpt-image-2.5-flare`)
+- Generates one 1024x1024 PNG at `low` quality using the existing `OPENAI_API_KEY`
+- Image generation times out after 40 seconds with no retries; Drive upload requests time out after 10 seconds with no retries (OAuth authentication time is not included)
+- Empty prompts and generation/upload failures return a text reply to LINE
 - Generated images are base64-encoded and uploaded to Google Drive
 - `checkGenerateArt()` is a test function that uploads sample.png
 
@@ -79,7 +81,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - `OPENAI_API_KEY` - OpenAI API key
 - `OPENAI_MODEL` - OpenAI model name (configured as `gpt-6-luna` in `.env.example`)
 - `MESSAGE_HISTORY_LIMIT` - Maximum number of conversation messages to retain (default: 10)
-- `STABILITY_API_KEY` - Stability AI API key
+- `OPENAI_IMAGE_MODEL` - Image model (default: `gpt-image-2.5-flare`)
 - `PORT` - Server port (default: 3000)
 - `SYSTEM_SETTINGS` - ChatGPT system prompt for personality/behavior
 
@@ -87,9 +89,9 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 1. LINE sends webhook event to `/webhook`
 2. [src/line.ts](src/line.ts) validates it's a group text message starting with bot name
-3. Routes to `useChatGpt()` or `useStableDiffusion()` based on trigger phrase
+3. Routes to `useChatGpt()` or `useImageGeneration()` based on trigger phrase
 4. For ChatGPT: extracts sender name, formats message as `{name}:{text}`, sends to OpenAI
-5. For Stable Diffusion: generates image, uploads to Google Drive, returns image URL
+5. For image generation: generates image, uploads to Google Drive, returns image URL
 6. Response sent back via LINE API
 
 **Conversation Context**:

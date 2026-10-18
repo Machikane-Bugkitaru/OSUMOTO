@@ -8,7 +8,7 @@
     "build": "rimraf dist && tsc",
     "ts-check": "tsc --project tsconfig.json",
     "deploy:prod": "rimraf dist && tsc && vercel --prod",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test test/*.test.cjs"
   },
   "repository": {
     "type": "git",
