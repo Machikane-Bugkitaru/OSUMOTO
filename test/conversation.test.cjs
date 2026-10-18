@@ -94,16 +94,30 @@ test('不正な履歴上限は起動時に検出する', () => {
   }
 });
 
-test('直近10件の新しい画像2枚だけを残し、順序と画像メッセージの枠を維持する', async () => {
+test('直近の画像が取得不能でも、前の画像へ遡って補充しない', async () => {
+  const ask = createConversationHistory({ limit: 10 });
+  await ask.rememberImage('a', 'old-image');
+  await ask.rememberImage('a', undefined);
+  await ask('a', 'この画像は？', async (messages) => {
+    assert.equal(
+      messages.some((m) => m.imageUrl),
+      false,
+    );
+    assert.match(messages.at(-2).content, /送り直して/);
+    return '画像を送り直してください';
+  });
+});
+
+test('直近10件の新しい画像1枚だけを残し、順序と画像メッセージの枠を維持する', async () => {
   const ask = createConversationHistory({ limit: 10 });
   for (const id of ['old', 'middle', 'new']) await ask.rememberImage('a', id);
   await ask('a', '説明して', async (messages) => {
     assert.equal(messages.length, 4);
     assert.deepEqual(
       messages.filter((m) => m.imageUrl).map((m) => m.imageUrl),
-      ['middle', 'new'],
+      ['new'],
     );
-    assert.match(messages[0].content, /直近2枚より前/);
+    assert.match(messages[0].content, /直近1枚より前/);
     return '説明';
   });
   await ask('b', '説明して', async (messages) => {

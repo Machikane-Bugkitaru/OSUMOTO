@@ -84,7 +84,7 @@ test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を
             );
             assert.deepEqual(
               images.map((p) => p.image_url),
-              ['data:image/png;base64,second', 'data:image/png;base64,third'],
+              ['data:image/png;base64,third'],
             );
             return { output_text: '画像の回答' };
           },

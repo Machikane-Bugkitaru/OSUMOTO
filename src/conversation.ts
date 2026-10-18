@@ -1,4 +1,9 @@
-export type Message = { role: 'user' | 'assistant'; content: string; imageUrl?: string };
+export type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+  imageUrl?: string;
+  imageMessage?: boolean;
+};
 type Conversation = {
   messages: Message[];
   tail: Promise<void>;
@@ -34,8 +39,12 @@ export function createConversationHistory({
       .slice(-retainedLimit)
       .reverse()
       .map((message) => {
-        if (!message.imageUrl || ++images <= 2) return message;
-        return { role: message.role, content: '[画像（参照対象の直近2枚より前）]' };
+        if (!message.imageMessage || ++images <= 1) return message;
+        return {
+          role: message.role,
+          content: '[画像（参照対象の直近1枚より前）]',
+          imageMessage: true,
+        };
       })
       .reverse();
   };
@@ -115,10 +124,11 @@ export function createConversationHistory({
           role: 'user',
           content: imageUrl ? '[画像]' : '[画像（取得できません。画像を送り直してください）]',
           imageUrl,
+          imageMessage: true,
         },
       ]);
 
-      // 2枚×グループ数で画像本体の保持量が増え続けないよう、プロセス全体にも上限を設ける。
+      // グループ数に伴い画像本体の保持量が増え続けないよう、プロセス全体にも上限を設ける。
       current.lastUsed = now();
       const groups = [...conversations.values()];
       let size = groups.reduce(
@@ -134,6 +144,7 @@ export function createConversationHistory({
           return {
             role: message.role,
             content: '[画像（保持容量を超えたため削除。画像を送り直してください）]',
+            imageMessage: true,
           };
         });
       }

@@ -100,7 +100,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 **Conversation Context**:
 
-- Conversation history is isolated per group; text turns and received images respect `MESSAGE_HISTORY_LIMIT` (default and maximum: 10); image inputs use only the latest two images inside that window
+- Conversation history is isolated per group; text turns and received images respect `MESSAGE_HISTORY_LIMIT` (default and maximum: 10); image inputs use only the latest image inside that window
 - History is process-local, expires after 30 idle minutes, and is capped at 1,000 groups
 - Webhook event IDs share one result per process until one hour after completion, including failures; up to 10,000 IDs are retained
 - Restarts and separate Vercel instances do not share history or deduplication state
