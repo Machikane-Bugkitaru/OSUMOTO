@@ -7,7 +7,7 @@ import {
 } from '@line/bot-sdk';
 import { load } from 'ts-dotenv';
 import { ask } from './gpt';
-import { generateArt } from './stable-diffusion';
+import { generateArt } from './image';
 
 const env = load({
   CHANNEL_ACCESS_TOKEN: String,
@@ -39,7 +39,7 @@ const textEventHandler = async (event: WebhookEvent): Promise<MessageAPIResponse
 
   let response: TextMessage | ImageMessage;
   if (text.startsWith(`${channelBotName}画伯`)) {
-    response = await useStableDiffusion(text.replace(`${channelBotName}画伯`, "").trim())
+    response = await useImageGeneration(text.replace(`${channelBotName}画伯`, "").trim())
   } else {
     response = await useChatGpt(userId, groupId, text)
   }
@@ -63,14 +63,28 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
   };
 }
 
-const useStableDiffusion = async (prompt: string): Promise<ImageMessage> => {
-  const imageUrl = await generateArt(prompt);
-  return {
-    type: 'image',
-    originalContentUrl: encodeURI(imageUrl),
-    previewImageUrl: encodeURI(imageUrl)
-  };
-}
+const useImageGeneration = async (prompt: string): Promise<ImageMessage | TextMessage> => {
+  if (!prompt) {
+    return { type: 'text', text: '画伯のあとに、描いてほしい内容を書いてください。' };
+  }
+
+  try {
+    const imageUrl = await generateArt(prompt);
+    return {
+      type: 'image',
+      originalContentUrl: encodeURI(imageUrl),
+      previewImageUrl: encodeURI(imageUrl),
+    };
+  } catch (error: unknown) {
+    console.error('画像生成に失敗しました', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return {
+      type: 'text',
+      text: '画像を生成できませんでした。内容を変えるか、少し待ってからもう一度お試しください。',
+    };
+  }
+};
 
 /**
  * 送信者の名前を抽出して返す

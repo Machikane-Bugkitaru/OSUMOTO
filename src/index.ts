@@ -4,7 +4,7 @@ import { lineBotConfig, textEventHandler } from './line';
 
 import { load } from 'ts-dotenv';
 import { ask } from './gpt';
-import { checkGenerateArt } from './stable-diffusion';
+import { checkGenerateArt } from './image';
 const env = load({
   PORT: String,
 });
