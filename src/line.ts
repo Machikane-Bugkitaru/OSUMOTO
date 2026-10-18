@@ -77,10 +77,7 @@ const useImageGeneration = async (prompt: string): Promise<ImageMessage | TextMe
       originalContentUrl: encodeURI(imageUrl),
       previewImageUrl: encodeURI(imageUrl),
     };
-  } catch (error: unknown) {
-    console.error('画像生成に失敗しました', {
-      name: error instanceof Error ? error.name : 'UnknownError',
-    });
+  } catch {
     return {
       type: 'text',
       text: '画像を生成できませんでした。内容を変えるか、少し待ってからもう一度お試しください。',
