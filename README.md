@@ -9,6 +9,7 @@ LINE グループ用の bot です。
 
 ChatGPT を使用した会話機能。直近の会話履歴を保持してコンテキストを維持します。
 文頭に「`CHANNEL_BOT_NAME`」をつけてグループで話すと返答します。
+OpenAI API は Fast モード（`service_tier: "priority"`）を指定します。通常料金の2倍です。
 
 ### 画像生成 AI
 
@@ -35,7 +36,7 @@ CHANNEL_BOT_NAME=<任意のボット名>
 
 # OpenAI設定
 OPENAI_API_KEY=<OpenAI APIキー>
-OPENAI_MODEL=<使用するモデル名（例: gpt-5-nano）>
+OPENAI_MODEL=gpt-6-luna
 MESSAGE_HISTORY_LIMIT=<会話履歴の保持件数（デフォルト: 10）>
 SYSTEM_SETTINGS=<ChatGPTのシステムプロンプト（任意）>
 
