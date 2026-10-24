@@ -4,6 +4,7 @@ import { createConversationHistory } from './conversation';
 import { toImageInput } from './image-input';
 import { readLineImage } from './line-image';
 import { webSearchInstructions } from './web-search';
+import { getGenerationErrorMessage } from './generation-error';
 const env = load({
   OPENAI_API_KEY: String,
   OPENAI_MODEL: String,
@@ -50,6 +51,9 @@ export async function ask(
     console.error('チャット応答に失敗しました', {
       name: error instanceof Error ? error.name : 'UnknownError',
     });
-    return '回答を生成できませんでした。少し待ってからもう一度お試しください。';
+    return (
+      getGenerationErrorMessage(error) ??
+      '回答を生成できませんでした。少し待ってからもう一度お試しください。'
+    );
   }
 }
