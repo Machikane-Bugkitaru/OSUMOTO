@@ -74,7 +74,7 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
 
 const useImageGeneration = async (prompt: string): Promise<ImageMessage | TextMessage> => {
   if (!prompt) {
-    return { type: 'text', text: '画伯のあとに、描いてほしい内容を書いてください。' };
+    return { type: 'text', text: '「画伯」のあとに、ワイに描いてほしい内容を書いてくれや' };
   }
 
   try {
