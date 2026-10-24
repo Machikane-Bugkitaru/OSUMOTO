@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { load } from 'ts-dotenv';
 import { uploadImage } from './google';
 import { webSearchInstructions } from './web-search';
+import { GeneratedImageUnavailableError, ImageStorageError } from './image-error';
 
 const env = load({
   OPENAI_API_KEY: String,
@@ -59,7 +60,7 @@ export const generateArt = async (prompt: string): Promise<string> => {
     stage = 'response';
     const image = response.data?.[0]?.b64_json;
     if (!image) {
-      throw new Error('OpenAI から画像データが返されませんでした。');
+      throw new GeneratedImageUnavailableError('OpenAI から画像データが返されませんでした。');
     }
 
     stage = 'storage';
@@ -87,6 +88,7 @@ export const generateArt = async (prompt: string): Promise<string> => {
           ? details.code
           : undefined,
     });
+    if (stage === 'storage') throw new ImageStorageError(error);
     throw error;
   }
 };

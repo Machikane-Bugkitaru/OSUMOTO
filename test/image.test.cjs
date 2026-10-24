@@ -143,7 +143,14 @@ for (const stage of ['generation', 'storage']) {
     const originalError = console.error;
     console.error = (...args) => logs.push(args);
     try {
-      await assert.rejects(generateArt('secret-prompt'), (actual) => actual === error);
+      await assert.rejects(generateArt('secret-prompt'), (actual) => {
+        if (stage === 'generation') return actual === error;
+        const { ImageStorageError } = require('../src/image-error');
+        assert.ok(actual instanceof ImageStorageError);
+        assert.equal(actual.capacityExceeded, false);
+        assert.doesNotMatch(JSON.stringify(actual), /secret-/);
+        return true;
+      });
     } finally {
       console.error = originalError;
     }
@@ -218,7 +225,7 @@ test('空のプロンプトは生成せず、入力案内を返す', async () =>
   );
   await textEventHandler(event('BOT画伯  '));
   assert.equal(reply.type, 'text');
-  assert.match(reply.text, /描いてほしい内容/);
+  assert.equal(reply.text, '「画伯」のあとに、ワイに描いてほしい内容を書いてくれや');
 });
 
 test('生成・保存の失敗は例外で終わらず、LINE に案内を返す', async () => {
@@ -240,6 +247,50 @@ test('生成・保存の失敗は例外で終わらず、LINE に案内を返す
   }
   assert.equal(reply.type, 'text');
   assert.equal(reply.text, 'なんか失敗したわ。もっかいたのむで。');
+});
+
+for (const reason of ['storageQuotaExceeded', 'rateLimitExceeded', 'insufficientPermissions']) {
+  test(`Drive保存エラーの固定返信をLINEへ返し、容量不足だけを区別する: ${reason}`, async () => {
+    const { generateArt } = imageModule(
+      async () => ({ data: [{ b64_json: 'cG5n' }] }),
+      async () => {
+        throw {
+          response: {
+            status: 403,
+            data: { error: { errors: [{ reason }] } },
+          },
+        };
+      },
+    );
+    let reply;
+    const { textEventHandler } = lineModule(generateArt, async (_, message) => {
+      reply = message;
+    });
+    await textEventHandler(event('BOT画伯 猫'));
+    assert.deepEqual(reply, {
+      type: 'text',
+      text:
+        reason === 'storageQuotaExceeded'
+          ? 'おまいら画像生成しすぎて保存でけへんくなったわ。古いの消してくれ。'
+          : '画像生成したけど内容どっかいったわ。もっかいたのむで。',
+    });
+  });
+}
+
+test('生成画像データが空の場合もAIを呼び直さず固定返信する', async () => {
+  const { generateArt } = imageModule(
+    async () => ({ data: [] }),
+    () => assert.fail('保存してはいけない'),
+  );
+  let reply;
+  const { textEventHandler } = lineModule(generateArt, async (_, message) => {
+    reply = message;
+  });
+  await textEventHandler(event('BOT画伯 猫'));
+  assert.deepEqual(reply, {
+    type: 'text',
+    text: '画像生成したけど内容どっかいったわ。もっかいたのむで。',
+  });
 });
 
 test('OpenAIのタイムアウトでは再試行を案内する専用の返信を返す', async () => {

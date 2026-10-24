@@ -66,7 +66,7 @@ test('APIの詳細エラーはLINE向けの案内に変換し、失敗した会�
     },
   });
   const failure = await ask('a', '失敗する発言');
-  assert.match(failure, /回答を生成できませんでした/);
+  assert.equal(failure, 'なんか失敗したわ。もっかいたのむで。');
   assert.doesNotMatch(failure, /private API error detail/);
   assert.equal(await ask('a', '次の発言'), '成功');
 });
@@ -91,7 +91,7 @@ for (const code of ['insufficient_quota', 'rate_limit_exceeded', 'moderation_blo
     });
     const expected = {
       insufficient_quota: '金なくなったわ。恵んでくれや。',
-      rate_limit_exceeded: '回答を生成できませんでした。少し待ってからもう一度お試しください。',
+      rate_limit_exceeded: 'なんか失敗したわ。もっかいたのむで。',
       moderation_blocked: 'あかんプロンプトみたいや。他ので試してくれや。',
       timeout: '時間かかって失敗したわ。もっかいたのむで。',
     };
@@ -132,7 +132,7 @@ test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を
   assert.deepEqual(reads, ['first', 'second', 'third']);
 });
 
-test('受信時の画像取得失敗を履歴で案内し、再送後はメモリの画像だけで回答する', async () => {
+test('受信時の画像取得失敗はモデルへ渡さず、再送後はメモリの画像だけで回答する', async () => {
   let reads = 0;
   const { ask, rememberImage } = loadModule('gpt.ts', {
     './line-image': {
@@ -150,12 +150,10 @@ test('受信時の画像取得失敗を履歴で案内し、再送後はメモ�
               Array.isArray(m.content) ? m.content.filter((p) => p.type === 'input_image') : [],
             );
             if (images.length === 0) {
-              assert.ok(
-                request.input.some(
-                  (m) => typeof m.content === 'string' && m.content.includes('送り直してください'),
-                ),
-              );
-              return { output_text: '画像を送り直してください。' };
+              assert.deepEqual(request.input.slice(1), [
+                { role: 'user', content: '何が写ってる？' },
+              ]);
+              return { output_text: '回答' };
             }
             assert.equal(images.length, 1);
             return { output_text: '復帰' };
@@ -165,7 +163,7 @@ test('受信時の画像取得失敗を履歴で案内し、再送後はメモ�
     },
   });
   await rememberImage('recovery', 'expired');
-  assert.match(await ask('recovery', '何が写ってる？'), /送り直して/);
+  assert.equal(await ask('recovery', '何が写ってる？'), '回答');
   await rememberImage('recovery', 'resent');
   assert.equal(await ask('recovery', '何が写ってる？'), '復帰');
   assert.equal(await ask('recovery', 'もう一度'), '復帰');

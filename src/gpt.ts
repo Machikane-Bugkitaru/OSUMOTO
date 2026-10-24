@@ -51,9 +51,6 @@ export async function ask(
     console.error('チャット応答に失敗しました', {
       name: error instanceof Error ? error.name : 'UnknownError',
     });
-    return (
-      getGenerationErrorMessage(error) ??
-      '回答を生成できませんでした。少し待ってからもう一度お試しください。'
-    );
+    return getGenerationErrorMessage(error) ?? 'なんか失敗したわ。もっかいたのむで。';
   }
 }

@@ -116,13 +116,15 @@ export function createConversationHistory({
       try {
         imageUrl = typeof image === 'function' ? await image() : image;
       } catch {
-        // 受信時の取得失敗は質問時に再取得せず、画像再送で復帰できる履歴として残す。
+        // 受信画像の取得失敗で後続の会話を止めず、例外に含まれうる認証情報も記録しない。
       }
+      if (!imageUrl) console.warn('受信画像を取得できませんでした');
       current.messages = bound([
         ...current.messages,
         {
           role: 'user',
-          content: imageUrl ? '[画像]' : '[画像（取得できません。画像を送り直してください）]',
+          // 取得失敗でも枠を残し、古い画像を最新として再利用させない。
+          content: '[画像]',
           imageUrl,
           imageMessage: true,
         },
@@ -137,16 +139,21 @@ export function createConversationHistory({
           group.messages.reduce((bytes, message) => bytes + (message.imageUrl?.length ?? 0), 0),
         0,
       );
+      let releasedImages = 0;
       for (const group of groups.sort((a, b) => a.lastUsed - b.lastUsed)) {
         group.messages = group.messages.map((message) => {
           if (size <= maxImageBytes || !message.imageUrl) return message;
           size -= message.imageUrl.length;
+          releasedImages += 1;
           return {
             role: message.role,
-            content: '[画像（保持容量を超えたため削除。画像を送り直してください）]',
+            content: '[画像]',
             imageMessage: true,
           };
         });
+      }
+      if (releasedImages > 0) {
+        console.warn('受信画像の保持容量上限により画像データを解放しました', { releasedImages });
       }
     });
 

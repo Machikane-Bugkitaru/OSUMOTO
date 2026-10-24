@@ -94,7 +94,9 @@ test('不正な履歴上限は起動時に検出する', () => {
   }
 });
 
-test('直近の画像が取得不能でも、前の画像へ遡って補充しない', async () => {
+test('直近の画像が取得不能でも、前の画像へ遡って補充せずログだけ残す', async (t) => {
+  const logs = [];
+  t.mock.method(console, 'warn', (...args) => logs.push(args));
   const ask = createConversationHistory({ limit: 10 });
   await ask.rememberImage('a', 'old-image');
   await ask.rememberImage('a', undefined);
@@ -103,9 +105,10 @@ test('直近の画像が取得不能でも、前の画像へ遡って補充し�
       messages.some((m) => m.imageUrl),
       false,
     );
-    assert.match(messages.at(-2).content, /送り直して/);
-    return '画像を送り直してください';
+    assert.equal(messages.at(-2).content, '[画像]');
+    return '回答';
   });
+  assert.deepEqual(logs, [['受信画像を取得できませんでした']]);
 });
 
 test('直近10件の新しい画像1枚だけを残し、順序と画像メッセージの枠を維持する', async () => {
@@ -215,7 +218,9 @@ test('画像の受信処理が終わるまで後続の質問を待ち、以後�
   await Promise.all([image, question]);
 });
 
-test('プロセス全体の画像保持容量を超えると参照を解放し再送案内を残す', async () => {
+test('プロセス全体の画像保持容量を超えると参照を解放しログだけ残す', async (t) => {
+  const logs = [];
+  t.mock.method(console, 'warn', (...args) => logs.push(args));
   const ask = createConversationHistory({ limit: 10, maxImageBytes: 5 });
   await ask.rememberImage('a', 'AAAA');
   await ask.rememberImage('b', 'BBBB');
@@ -224,13 +229,18 @@ test('プロセス全体の画像保持容量を超えると参照を解放し�
       messages.some((m) => m.imageUrl),
       false,
     );
-    assert.match(messages[0].content, /保持容量/);
+    assert.equal(messages[0].content, '[画像]');
+    const { toImageInput } = require('../src/image-input');
+    assert.deepEqual(toImageInput(messages), [{ role: 'user', content: '質問' }]);
     return '回答';
   });
   await ask('b', '質問', async (messages) => {
     assert.equal(messages[0].imageUrl, 'BBBB');
     return '回答';
   });
+  assert.deepEqual(logs, [
+    ['受信画像の保持容量上限により画像データを解放しました', { releasedImages: 1 }],
+  ]);
 });
 
 test('回答待ちの間に容量上限で解放した画像を、回答完了時に復活させない', async () => {
