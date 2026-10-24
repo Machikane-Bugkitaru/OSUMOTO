@@ -71,6 +71,34 @@ test('APIの詳細エラーはLINE向けの案内に変換し、失敗した会�
   assert.equal(await ask('a', '次の発言'), '成功');
 });
 
+for (const code of ['insufficient_quota', 'rate_limit_exceeded', 'moderation_blocked', 'timeout']) {
+  test(`テキスト生成もエラー種別に応じた返信を返す: ${code}`, async () => {
+    const { RateLimitError, BadRequestError, APIConnectionTimeoutError } = require('openai');
+    const { ask } = loadModule('gpt.ts', {
+      openai: class {
+        constructor() {
+          this.responses = {
+            create: async () => {
+              if (code === 'timeout') throw new APIConnectionTimeoutError();
+              if (code === 'moderation_blocked') {
+                throw new BadRequestError(400, { code }, 'private API details', new Headers());
+              }
+              throw new RateLimitError(429, { code }, 'private API details', new Headers());
+            },
+          };
+        }
+      },
+    });
+    const expected = {
+      insufficient_quota: '金なくなったわ。恵んでくれや。',
+      rate_limit_exceeded: '回答を生成できませんでした。少し待ってからもう一度お試しください。',
+      moderation_blocked: 'あかんプロンプトみたいや。他ので試してくれや。',
+      timeout: '時間かかって失敗したわ。もっかいたのむで。',
+    };
+    assert.equal(await ask('quota', '質問'), expected[code]);
+  });
+}
+
 test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を参照する', async () => {
   const reads = [];
   const { ask, rememberImage } = loadModule('gpt.ts', {

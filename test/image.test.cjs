@@ -239,8 +239,49 @@ test('生成・保存の失敗は例外で終わらず、LINE に案内を返す
     console.error = originalError;
   }
   assert.equal(reply.type, 'text');
-  assert.match(reply.text, /画像を生成できませんでした/);
+  assert.equal(reply.text, 'なんか失敗したわ。もっかいたのむで。');
 });
+
+test('OpenAIのタイムアウトでは再試行を案内する専用の返信を返す', async () => {
+  const { APIConnectionTimeoutError } = require('openai');
+  let reply;
+  const { textEventHandler } = lineModule(
+    async () => {
+      throw new APIConnectionTimeoutError();
+    },
+    async (_, message) => {
+      reply = message;
+    },
+  );
+  await textEventHandler(event('BOT画伯 猫'));
+  assert.deepEqual(reply, {
+    type: 'text',
+    text: '時間かかって失敗したわ。もっかいたのむで。',
+  });
+});
+
+for (const code of ['insufficient_quota', 'rate_limit_exceeded']) {
+  test(`HTTP 429のクォータ不足と一時的な制限を区別する: ${code}`, async () => {
+    const { RateLimitError } = require('openai');
+    let reply;
+    const { textEventHandler } = lineModule(
+      async () => {
+        throw new RateLimitError(429, { code }, 'API error details', new Headers());
+      },
+      async (_, message) => {
+        reply = message;
+      },
+    );
+    await textEventHandler(event('BOT画伯 猫'));
+    assert.deepEqual(reply, {
+      type: 'text',
+      text:
+        code === 'insufficient_quota'
+          ? '金なくなったわ。恵んでくれや。'
+          : 'なんか失敗したわ。もっかいたのむで。',
+    });
+  });
+}
 
 for (const code of ['moderation_blocked', 'invalid_value', undefined]) {
   test(`HTTP 400でもmoderation_blockedだけ専用の返信を返す: ${code}`, async () => {
@@ -262,7 +303,7 @@ for (const code of ['moderation_blocked', 'invalid_value', undefined]) {
       text:
         code === 'moderation_blocked'
           ? 'あかんプロンプトみたいや。他ので試してくれや。'
-          : '画像を生成できませんでした。内容を変えるか、少し待ってからもう一度お試しください。',
+          : 'なんか失敗したわ。もっかいたのむで。',
     });
   });
 }

@@ -6,6 +6,7 @@ import {
   ImageMessage,
 } from '@line/bot-sdk';
 import { load } from 'ts-dotenv';
+import { getGenerationErrorMessage } from './generation-error';
 import { ask, rememberImage } from './gpt';
 import { generateArt } from './image';
 
@@ -24,7 +25,6 @@ const channelBotName = env.CHANNEL_BOT_NAME || 'BOT';
 
 const lineClient = new Client(lineBotConfig);
 const groupMemberMap = new Map<string, string>();
-const moderationBlockedMessage = 'あかんプロンプトみたいや。他ので試してくれや。';
 
 const textEventHandler = async (
   event: WebhookEvent,
@@ -85,17 +85,9 @@ const useImageGeneration = async (prompt: string): Promise<ImageMessage | TextMe
       previewImageUrl: encodeURI(imageUrl),
     };
   } catch (error: unknown) {
-    if (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 'moderation_blocked'
-    ) {
-      return { type: 'text', text: moderationBlockedMessage };
-    }
     return {
       type: 'text',
-      text: '画像を生成できませんでした。内容を変えるか、少し待ってからもう一度お試しください。',
+      text: getGenerationErrorMessage(error) ?? 'なんか失敗したわ。もっかいたのむで。',
     };
   }
 };
