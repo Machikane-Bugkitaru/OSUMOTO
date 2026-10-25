@@ -7,17 +7,36 @@ function imageModule(
   upload,
   prepare = async (request) => ({ output_text: request.input[1].content }),
 ) {
-  return loadModule('image.ts', {
-    openai: class {
-      constructor(options) {
-        assert.equal(options.maxRetries, 0);
-        assert.equal(options.timeout, 40_000);
-        this.images = { generate };
-        this.responses = { create: prepare };
-      }
+  const OpenAI = require('openai');
+  const { createOpenAIImageClient } = loadModule('clients/openai-image.ts', {
+    openai: {
+      ...OpenAI,
+      __esModule: true,
+      default: class {
+        constructor(options) {
+          assert.equal(options.maxRetries, 0);
+          assert.equal(options.timeout, 40_000);
+          this.images = { generate };
+          this.responses = { create: prepare };
+        }
+      },
     },
-    './google': { uploadImage: upload },
   });
+  const { imageStorageClient } = loadModule('clients/image-storage.ts', {
+    '../google': { uploadImage: upload },
+  });
+  const { createGenerateImage } = require('../src/usecases/generate-image');
+  return {
+    generateArt: createGenerateImage({
+      images: createOpenAIImageClient({
+        apiKey: 'test-key',
+        promptModel: 'test-model',
+        imageModel: 'gpt-image-2.5-flare',
+      }),
+      storage: imageStorageClient,
+      now: () => Date.now(),
+    }),
+  };
 }
 
 test('画像生成前に任意の検索を有効にし、確認した描写を画像モデルに渡す', async () => {
@@ -118,7 +137,10 @@ test('API エラーを画像データとして保存しない', async () => {
     },
     () => assert.fail('保存してはいけない'),
   );
-  await assert.rejects(generateArt('猫'), error);
+  await assert.rejects(generateArt('猫'), (actual) => {
+    const { ImageClientError } = require('../src/image-error');
+    return actual instanceof ImageClientError && actual.code === undefined;
+  });
 });
 
 for (const stage of ['generation', 'storage']) {
@@ -144,7 +166,13 @@ for (const stage of ['generation', 'storage']) {
     console.error = (...args) => logs.push(args);
     try {
       await assert.rejects(generateArt('secret-prompt'), (actual) => {
-        if (stage === 'generation') return actual === error;
+        if (stage === 'generation') {
+          const { ImageClientError } = require('../src/image-error');
+          assert.ok(actual instanceof ImageClientError);
+          assert.equal(actual.code, 'moderation_blocked');
+          assert.doesNotMatch(JSON.stringify(actual), /secret-/);
+          return true;
+        }
         const { ImageStorageError } = require('../src/image-error');
         assert.ok(actual instanceof ImageStorageError);
         assert.equal(actual.capacityExceeded, false);
@@ -393,3 +421,32 @@ test('LINEのgroupIdをチャット履歴のキーとして渡す', async () => 
   await textEventHandler(event('BOTこんにちは'));
   assert.deepEqual(reply, { type: 'text', text: 'こんにちは' });
 });
+
+for (const failure of ['timeout', 'insufficient_quota']) {
+  test(`クライアントで正規化した失敗を再試行せずLINEに返す: ${failure}`, async () => {
+    const { APIConnectionTimeoutError, RateLimitError } = require('openai');
+    let attempts = 0;
+    let reply;
+    const { generateArt } = imageModule(
+      async () => {
+        attempts++;
+        throw failure === 'timeout'
+          ? new APIConnectionTimeoutError()
+          : new RateLimitError(429, { code: failure }, 'secret details', new Headers());
+      },
+      () => assert.fail('保存してはいけない'),
+    );
+    const { textEventHandler } = lineModule(generateArt, async (_, message) => {
+      reply = message;
+    });
+    await textEventHandler(event('BOT画伯 猫'));
+    assert.equal(attempts, 1);
+    assert.deepEqual(reply, {
+      type: 'text',
+      text:
+        failure === 'timeout'
+          ? '時間かかって失敗したわ。もっかいたのむで。'
+          : '金なくなったわ。恵んでくれや。',
+    });
+  });
+}

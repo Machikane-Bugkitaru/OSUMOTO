@@ -6,7 +6,7 @@ import {
   ImageMessage,
 } from '@line/bot-sdk';
 import { load } from 'ts-dotenv';
-import { getGenerationErrorMessage } from './generation-error';
+import { createImageReply } from './adapters/line/image-reply';
 import { ask, rememberImage } from './gpt';
 import { generateArt } from './image';
 
@@ -25,6 +25,7 @@ const channelBotName = env.CHANNEL_BOT_NAME || 'BOT';
 
 const lineClient = new Client(lineBotConfig);
 const groupMemberMap = new Map<string, string>();
+const useImageGeneration = createImageReply(generateArt);
 
 const textEventHandler = async (
   event: WebhookEvent,
@@ -70,26 +71,6 @@ const useChatGpt = async (userId: string, groupId: string, text: string): Promis
     type: 'text',
     text: res.trim(),
   };
-};
-
-const useImageGeneration = async (prompt: string): Promise<ImageMessage | TextMessage> => {
-  if (!prompt) {
-    return { type: 'text', text: '「画伯」のあとに、ワイに描いてほしい内容を書いてくれや' };
-  }
-
-  try {
-    const imageUrl = await generateArt(prompt);
-    return {
-      type: 'image',
-      originalContentUrl: encodeURI(imageUrl),
-      previewImageUrl: encodeURI(imageUrl),
-    };
-  } catch (error: unknown) {
-    return {
-      type: 'text',
-      text: getGenerationErrorMessage(error) ?? 'なんか失敗したわ。もっかいたのむで。',
-    };
-  }
 };
 
 /**

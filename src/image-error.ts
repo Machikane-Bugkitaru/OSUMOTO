@@ -5,11 +5,31 @@ const property = (value: unknown, key: string): unknown =>
     ? (value as Record<string, unknown>)[key]
     : undefined;
 
-export class ImageStorageError extends Error {
+// Normalized failures expose only safe scalar diagnostics across the client boundary.
+export class ImageClientError extends Error {
+  readonly errorType: string;
+  readonly status: number | undefined;
+  readonly code: string | undefined;
+
+  constructor(
+    error: unknown,
+    readonly timedOut = false,
+  ) {
+    super('画像処理の通信に失敗しました。');
+    this.errorType = error instanceof Error ? error.constructor.name : 'UnknownError';
+    const status = property(error, 'status') ?? property(property(error, 'response'), 'status');
+    this.status = typeof status === 'number' ? status : undefined;
+    const code = property(error, 'code');
+    this.code = typeof code === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(code) ? code : undefined;
+  }
+}
+
+export class ImageStorageError extends ImageClientError {
   readonly capacityExceeded: boolean;
 
   constructor(error: unknown) {
-    super('画像の保存に失敗しました。');
+    super(error);
+    this.message = '画像の保存に失敗しました。';
     const responseError = property(property(property(error, 'response'), 'data'), 'error');
     const errors = property(responseError, 'errors');
     this.capacityExceeded =

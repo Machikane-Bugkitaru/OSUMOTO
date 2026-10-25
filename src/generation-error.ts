@@ -1,5 +1,5 @@
 import { APIConnectionTimeoutError } from 'openai';
-import { GeneratedImageUnavailableError, ImageStorageError } from './image-error';
+import { GeneratedImageUnavailableError, ImageStorageError, ImageClientError } from './image-error';
 
 export const getGenerationErrorMessage = (error: unknown): string | undefined => {
   if (error instanceof ImageStorageError && error.capacityExceeded) {
@@ -8,7 +8,10 @@ export const getGenerationErrorMessage = (error: unknown): string | undefined =>
   if (error instanceof ImageStorageError || error instanceof GeneratedImageUnavailableError) {
     return '画像生成したけど内容どっかいったわ。もっかいたのむで。';
   }
-  if (error instanceof APIConnectionTimeoutError) {
+  if (
+    error instanceof APIConnectionTimeoutError ||
+    (error instanceof ImageClientError && error.timedOut)
+  ) {
     return '時間かかって失敗したわ。もっかいたのむで。';
   }
   if (typeof error !== 'object' || error === null || !('code' in error)) return undefined;
