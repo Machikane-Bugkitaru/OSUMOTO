@@ -32,53 +32,9 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 See [the layer design and feature placement guide](docs/architecture/README.md) for dependency rules, injection, tests, and the current image-generation scope.
 
-### Entry Point and Request Flow
+Place HTTP/webhook entrypoints in `src/entrypoints`, LINE input/output conversion in `src/adapters/line`, orchestration in `src/usecases`, SDK-independent rules in `src/services`, external communication in `src/clients`, and configuration loading and validation in `src/config`. Assemble dependencies at startup and inject them through function arguments.
 
-- **[src/index.ts](src/index.ts)** - Express server setup with three endpoints:
-  - `GET /` - Test endpoint for ChatGPT functionality
-  - `GET /image` - Test endpoint for image generation
-  - `POST /webhook` - LINE webhook handler (main entry point for production)
-
-### Core Modules
-
-**[src/line.ts](src/line.ts)** - LINE Bot integration layer
-
-- Handles webhook events from LINE
-- Filters for group chat messages starting with `CHANNEL_BOT_NAME`
-- Routes requests to either ChatGPT (default) or OpenAI image generation (when message starts with `{CHANNEL_BOT_NAME}画伯`)
-- Manages group member profile caching in `groupMemberMap`
-- Returns TextMessage or ImageMessage responses
-
-**[src/gpt.ts](src/gpt.ts)** - OpenAI ChatGPT integration
-
-- Uses `openai@6.8.1` with modern Responses API (`responses.create()`)
-- Requests Fast mode via `service_tier: "priority"` (2x standard pricing)
-- Model configured via the required `OPENAI_MODEL` env variable (`gpt-6-luna` in `.env.example`)
-- Uses `src/conversation.ts` for per-group history and serial processing (default: 10 messages)
-- System settings configured via `SYSTEM_SETTINGS` env variable
-- `ask(groupId, content)` sends messages and maintains context; content may be a deferred sender-name lookup to preserve queue order
-- `rememberImage(groupId, imageId)` loads and records a received LINE image in process memory without replying
-- `src/line-image.ts` retrieves images once at reception (10s / 8MiB each), and `src/image-input.ts` builds multimodal input from memory; total retained data URLs are capped at 64MiB
-
-**[src/image.ts](src/image.ts)** - Image generation public API and local sample upload
-
-- `src/bootstrap.ts` wires image config, clients, and `src/usecases/generate-image.ts`; `src/adapters/line/image-reply.ts` converts results to LINE replies
-- OpenAI communication lives in `src/clients/openai-image.ts`; `src/clients/image-storage.ts` reuses the existing Drive transport
-
-- Uses `images.generate()` with `OPENAI_IMAGE_MODEL` (default: `gpt-image-2.5-flare`)
-- Generates one 1024x1024 PNG at `low` quality using the existing `OPENAI_API_KEY`
-- Prepares the image prompt using `OPENAI_MODEL`, optional `web_search`, and the shared search policy in `src/web-search.ts`
-- Prompt preparation and image generation share a 40-second budget with no retries; Drive upload requests time out after 10 seconds with no retries (OAuth authentication time is not included)
-- Empty prompts and generation/upload failures return a text reply to LINE
-- Generated images are base64-encoded and uploaded to Google Drive
-- `checkGenerateArt()` is a test function that uploads sample.png
-
-**[src/google.ts](src/google.ts)** - Google Drive integration
-
-- Uploads generated images to Google Drive
-- Requires `credentials.json` with service account credentials (use `credentials.json.example` as template)
-- Images uploaded to folder ID: `1lLo7CG0ZdhTooWsAsC2NEs34QEUb8UgZ`
-- Returns shareable Google Drive URLs in format: `https://drive.google.com/uc?id={fileId}`
+The image-generation flow follows this separation. HTTP handling and chat processing still include code outside these directories; entrypoints and services directories have not yet been introduced. Add layers only when they have a concrete responsibility.
 
 ### Key Technical Details
 
@@ -96,12 +52,7 @@ See [the layer design and feature placement guide](docs/architecture/README.md) 
 
 **Message Flow**:
 
-1. LINE sends webhook event to `/webhook`
-2. [src/line.ts](src/line.ts) validates it's a group text message starting with bot name
-3. Routes to `useChatGpt()` or `useImageGeneration()` based on trigger phrase
-4. For ChatGPT: extracts sender name, formats message as `{name}:{text}`, sends to OpenAI
-5. For image generation: generates image, uploads to Google Drive, returns image URL
-6. Response sent back via LINE API
+LINE webhook requests are validated and deduplicated before group messages with the configured bot prefix are routed to chat or image generation. Image generation prepares the prompt, generates an image, saves it to Drive, and converts the result or failure to a LINE reply.
 
 **Conversation Context**:
 
