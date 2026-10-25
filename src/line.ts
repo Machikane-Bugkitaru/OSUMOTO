@@ -6,6 +6,7 @@ import {
   ImageMessage,
 } from '@line/bot-sdk';
 import { load } from 'ts-dotenv';
+import { createChatReply } from './adapters/line/chat-reply';
 import { createImageReply } from './adapters/line/image-reply';
 import { ask, rememberImage } from './gpt';
 import { generateArt } from './image';
@@ -26,6 +27,11 @@ const channelBotName = env.CHANNEL_BOT_NAME || 'BOT';
 const lineClient = new Client(lineBotConfig);
 const groupMemberMap = new Map<string, string>();
 const useImageGeneration = createImageReply(generateArt);
+const useChatGpt = createChatReply({
+  ask,
+  getSenderName: (userId, groupId) => extractSenderName(userId, groupId),
+  botName: channelBotName,
+});
 
 const textEventHandler = async (
   event: WebhookEvent,
@@ -57,20 +63,6 @@ const textEventHandler = async (
     response = await useChatGpt(userId, groupId, text);
   }
   await lineClient.replyMessage(event.replyToken, response);
-};
-
-const useChatGpt = async (userId: string, groupId: string, text: string): Promise<TextMessage> => {
-  // 名前取得中に後続画像が先の発言へ割り込まないよう、履歴キュー内で名前を取得する。
-  let res = await ask(groupId, async () => `${await extractSenderName(userId, groupId)}:${text}`);
-
-  // 回答文を加工
-  if (new RegExp(`^${channelBotName}[:：]*`).test(res)) {
-    res = res.replace(channelBotName, '').substring(1);
-  }
-  return {
-    type: 'text',
-    text: res.trim(),
-  };
 };
 
 /**

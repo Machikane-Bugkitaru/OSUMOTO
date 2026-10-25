@@ -1,4 +1,5 @@
 import { APIConnectionTimeoutError } from 'openai';
+import { ChatClientError } from './clients/chat';
 import { GeneratedImageUnavailableError, ImageStorageError, ImageClientError } from './image-error';
 
 export const getGenerationErrorMessage = (error: unknown): string | undefined => {
@@ -10,7 +11,7 @@ export const getGenerationErrorMessage = (error: unknown): string | undefined =>
   }
   if (
     error instanceof APIConnectionTimeoutError ||
-    (error instanceof ImageClientError && error.timedOut)
+    ((error instanceof ImageClientError || error instanceof ChatClientError) && error.timedOut)
   ) {
     return '時間かかって失敗したわ。もっかいたのむで。';
   }
