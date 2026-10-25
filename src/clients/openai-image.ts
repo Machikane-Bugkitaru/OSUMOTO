@@ -2,7 +2,7 @@ import OpenAI, { APIConnectionTimeoutError } from 'openai';
 import type { ImageGenerationConfig } from '../config/image-generation';
 import type { ImageGenerationClient } from './image-generation';
 import { ImageClientError } from '../image-error';
-import { webSearchInstructions } from '../web-search';
+import { webSearchInstructions } from './web-search';
 
 export const createOpenAIImageClient = (config: ImageGenerationConfig): ImageGenerationClient => {
   const client = new OpenAI({ apiKey: config.apiKey, timeout: 40_000, maxRetries: 0 });

@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { loadModule } = require('./helpers.cjs');
+const { loadLineModule } = require('./line-helpers.cjs');
 
 function imageModule(
   generate,
@@ -40,7 +41,7 @@ function imageModule(
 }
 
 test('画像生成前に任意の検索を有効にし、確認した描写を画像モデルに渡す', async () => {
-  const { webSearchInstructions } = require('../src/web-search');
+  const { webSearchInstructions } = require('../src/clients/web-search');
   const { generateArt } = imageModule(
     async (request, options) => {
       assert.equal(request.prompt, '確認した最新の外観を描く');
@@ -208,7 +209,7 @@ const event = (text, source = 'group') => ({
 });
 
 function lineModule(generateArt, replyMessage) {
-  return loadModule('line.ts', {
+  return loadLineModule({
     '@line/bot-sdk': {
       Client: class {
         constructor() {
@@ -217,7 +218,7 @@ function lineModule(generateArt, replyMessage) {
       },
     },
     './image': { generateArt },
-    './gpt': { ask: () => assert.fail('画伯でチャット API を呼んではいけない') },
+    './bootstrap': { ask: () => assert.fail('画伯でチャット API を呼んではいけない') },
   });
 }
 
@@ -321,17 +322,19 @@ test('生成画像データが空の場合もAIを呼び直さず固定返信す
   });
 });
 
-test('OpenAIのタイムアウトでは再試行を案内する専用の返信を返す', async () => {
+test('プロンプト準備のSDKタイムアウトを正規化して専用の返信を返す', async () => {
   const { APIConnectionTimeoutError } = require('openai');
-  let reply;
-  const { textEventHandler } = lineModule(
+  const { generateArt } = imageModule(
+    () => assert.fail('生成してはいけない'),
+    () => assert.fail('保存してはいけない'),
     async () => {
       throw new APIConnectionTimeoutError();
     },
-    async (_, message) => {
-      reply = message;
-    },
   );
+  let reply;
+  const { textEventHandler } = lineModule(generateArt, async (_, message) => {
+    reply = message;
+  });
   await textEventHandler(event('BOT画伯 猫'));
   assert.deepEqual(reply, {
     type: 'text',
@@ -398,7 +401,7 @@ test('対象外の発言・個別チャットでは画像 API と返信を呼ば
 
 test('LINEのgroupIdをチャット履歴のキーとして渡す', async () => {
   let reply;
-  const { textEventHandler } = loadModule('line.ts', {
+  const { textEventHandler } = loadLineModule({
     '@line/bot-sdk': {
       Client: class {
         async getGroupMemberProfile() {
@@ -410,7 +413,7 @@ test('LINEのgroupIdをチャット履歴のキーとして渡す', async () => 
       },
     },
     './image': { generateArt: () => assert.fail('画像を生成してはいけない') },
-    './gpt': {
+    './bootstrap': {
       ask: async (groupId, text) => {
         assert.equal(groupId, 'group-id');
         assert.equal(await text(), '太郎:BOTこんにちは');

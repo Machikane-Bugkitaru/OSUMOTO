@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { loadModule } = require('./helpers.cjs');
+const { loadChatModule } = require('./chat-helpers.cjs');
 
 const expectedSettings = `test settings
 
@@ -22,9 +22,10 @@ const expectedSettings = `test settings
 
 test('チャットAPIにグループ別の履歴と既存のモデル設定を渡す', async () => {
   const inputs = [];
-  const { ask } = loadModule('gpt.ts', {
+  const { ask } = loadChatModule({
     openai: class {
-      constructor() {
+      constructor(options) {
+        assert.deepEqual(options, { apiKey: 'test-key' });
         this.responses = {
           create: async (request) => {
             assert.equal(request.model, 'test-model');
@@ -51,7 +52,7 @@ test('チャットAPIにグループ別の履歴と既存のモデル設定を�
 
 test('APIの詳細エラーはLINE向けの案内に変換し、失敗した会話を保存しない', async () => {
   let count = 0;
-  const { ask } = loadModule('gpt.ts', {
+  const { ask } = loadChatModule({
     openai: class {
       constructor() {
         this.responses = {
@@ -74,7 +75,7 @@ test('APIの詳細エラーはLINE向けの案内に変換し、失敗した会�
 for (const code of ['insufficient_quota', 'rate_limit_exceeded', 'moderation_blocked', 'timeout']) {
   test(`テキスト生成もエラー種別に応じた返信を返す: ${code}`, async () => {
     const { RateLimitError, BadRequestError, APIConnectionTimeoutError } = require('openai');
-    const { ask } = loadModule('gpt.ts', {
+    const { ask } = loadChatModule({
       openai: class {
         constructor() {
           this.responses = {
@@ -101,7 +102,7 @@ for (const code of ['insufficient_quota', 'rate_limit_exceeded', 'moderation_blo
 
 test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を参照する', async () => {
   const reads = [];
-  const { ask, rememberImage } = loadModule('gpt.ts', {
+  const { ask, rememberImage } = loadChatModule({
     './line-image': {
       ImageUnavailableError: class extends Error {},
       readLineImage: async (id) => {
@@ -134,7 +135,7 @@ test('画像履歴をモデルinputへ含め、追加質問でも同じ画像を
 
 test('受信時の画像取得失敗はモデルへ渡さず、再送後はメモリの画像だけで回答する', async () => {
   let reads = 0;
-  const { ask, rememberImage } = loadModule('gpt.ts', {
+  const { ask, rememberImage } = loadChatModule({
     './line-image': {
       readLineImage: async (id) => {
         reads += 1;
@@ -168,4 +169,27 @@ test('受信時の画像取得失敗はモデルへ渡さず、再送後はメ�
   assert.equal(await ask('recovery', '何が写ってる？'), '復帰');
   assert.equal(await ask('recovery', 'もう一度'), '復帰');
   assert.equal(reads, 2);
+});
+
+test('通信エラーの名前だけを既存ログへ残し、詳細や認証情報を公開しない', async (t) => {
+  const logs = [];
+  t.mock.method(console, 'error', (...args) => logs.push(args));
+  const { ask } = loadChatModule({
+    openai: class {
+      constructor() {
+        this.responses = {
+          create: async () => {
+            const error = new Error('secret-body');
+            error.name = 'ProviderFailure';
+            error.code = 'rate_limit_exceeded';
+            error.headers = { authorization: 'secret-token' };
+            throw error;
+          },
+        };
+      }
+    },
+  });
+  assert.equal(await ask('group', '質問'), 'なんか失敗したわ。もっかいたのむで。');
+  assert.deepEqual(logs, [['チャット応答に失敗しました', { name: 'ProviderFailure' }]]);
+  assert.doesNotMatch(JSON.stringify(logs), /secret-/);
 });

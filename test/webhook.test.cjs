@@ -8,8 +8,8 @@ async function withServer(handler, run) {
     './line': {
       lineBotConfig: { channelAccessToken: 'test-token', channelSecret: 'test-secret' },
       textEventHandler: handler,
+      ask: () => assert.fail('チャットAPIを呼んではいけない'),
     },
-    './gpt': { ask: () => assert.fail('チャットAPIを呼んではいけない') },
     './image': { checkGenerateArt: () => assert.fail('画像APIを呼んではいけない') },
   });
   const server = app.listen(0, '127.0.0.1');

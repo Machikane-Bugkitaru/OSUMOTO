@@ -12,13 +12,13 @@
 | `src/services`      | 履歴管理や画像選択など、SDK に依存しないルール                      | SDK 非依存の値・型                          |
 | `src/clients`       | OpenAI / LINE / Google Drive の通信、SDK の要求・応答・例外の変換   | 外部 SDK、SDK 非依存の契約・設定値          |
 | `src/config`        | 設定の読み込み、既定値、検証                                        | 設定ライブラリ                              |
-| `src` の起動処理    | 設定を読み込み、具体的な clients と usecases を組み立てる           | config、clients、usecases                   |
+| `src` の起動処理    | 設定を読み込み、具体的な clients と usecases を組み立てる           | config、clients、usecases、adapters         |
 
-外部 SDK の要求・応答型を usecases や services に渡さない。クライアント契約は文字列、数値、アプリケーションの型で表し、SDK 例外は安全なアプリケーションのエラーに変換する。LINE SDK 型は入口や変換の境界内で使用する。本文や認証情報をログに出さない。usecases は具体的なクライアント実装や起動処理に依存しない。
+外部 SDK の要求・応答型を usecases や services に渡さない。クライアント契約は文字列、数値、アプリケーションの型で表し、OpenAI・画像保存の例外は正規化する。LINE 通信は既存の例外伝播・プロフィール例外ログを使用する。LINE SDK 型は入口や変換の境界内で使用する。新しいログには本文や認証情報を含めない。usecases は具体的なクライアント実装や起動処理に依存しない。
 
 設定と依存は起動時に組み立て、関数の引数で注入する。usecases 内で環境変数の読み込みや SDK の生成を行わず、時間依存の処理には時計も注入できるようにする。DI コンテナは使わない。usecases は client 契約を直接利用してよい。現在 DB はなく、Repository 層や Redis は導入しない。
 
-画像生成では usecases、clients、adapters/line、config の分離と起動時の依存組み立てを適用している。HTTP 受付やチャット処理には未移行のコードがあり、entrypoints と services はまだ設けていない。
+画像生成と会話返信に層分離を適用し、履歴ルールは services に置く。会話返信と受信画像は同じ履歴・処理キューを共有し、送信者名もキュー内で取得する。入口・既存通信の整理を進め、最終的に src 直下は起動と依存の組み立てだけにする。
 
 ## 機能追加時の配置方針
 
