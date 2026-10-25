@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 require('ts-node/register/transpile-only');
-const { createEventDeduplicator } = require('../src/deduplication');
+const { createEventDeduplicator } = require('../../src/entrypoints/deduplication');
 
 test('同時に受信した同じIDの処理を共有し、完了後も再実行しない', async () => {
   const once = createEventDeduplicator();

@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 require('../../helpers.cjs');
 const { createImageReply } = require('../../../src/adapters/line/image-reply');
-const { ImageClientError } = require('../../../src/image-error');
+const { ImageClientError } = require('../../../src/clients/image-generation');
 
 test('画像URLをLINEの画像返信へ変換する', async () => {
   const reply = createImageReply(async () => 'https://example.com/猫.png');

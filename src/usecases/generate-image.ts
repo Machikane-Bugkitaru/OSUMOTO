@@ -1,5 +1,6 @@
 import type { ImageGenerationClient, ImageStorageClient } from '../clients/image-generation';
-import { ImageClientError, GeneratedImageUnavailableError } from '../image-error';
+import { ImageClientError } from '../clients/image-generation';
+import { GeneratedImageUnavailableError } from './image-error';
 
 interface Dependencies {
   images: ImageGenerationClient;

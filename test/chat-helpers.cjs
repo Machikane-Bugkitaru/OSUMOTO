@@ -26,7 +26,6 @@ function loadChatModule(mocks) {
       }),
     },
   };
-  if (mocks['./line-image']) dependencies['./line-image'] = mocks['./line-image'];
   const bootstrap = loadModule('bootstrap.ts', dependencies);
   return bootstrap.createChatServices({
     readImage:

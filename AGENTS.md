@@ -32,9 +32,7 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 See [the layer design and feature placement guide](docs/architecture/README.md) for dependency rules, injection, tests, and the current implementation scope.
 
-Place HTTP/webhook entrypoints in `src/entrypoints`, LINE input/output conversion in `src/adapters/line`, orchestration in `src/usecases`, SDK-independent rules in `src/services`, external communication in `src/clients`, and configuration loading and validation in `src/config`. Assemble dependencies at startup and inject them through function arguments.
-
-The image-generation and chat-reply flows follow this separation. Chat replies and received images share one history queue, with sender-name lookup deferred inside it. History rules live in services. HTTP handling and existing transports still include code outside these directories; the final root layout keeps only startup and dependency composition. Add layers only when they have a concrete responsibility.
+Keep the `src` root limited to startup and dependency composition. Preserve prompts, LINE replies, and the shared queue for chat and received images when changing layers.
 
 ### Key Technical Details
 

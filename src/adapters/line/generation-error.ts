@@ -1,10 +1,7 @@
 import { APIConnectionTimeoutError } from 'openai';
 import { ChatClientError } from '../../clients/chat';
-import {
-  GeneratedImageUnavailableError,
-  ImageStorageError,
-  ImageClientError,
-} from '../../image-error';
+import { ImageStorageError, ImageClientError } from '../../clients/image-generation';
+import { GeneratedImageUnavailableError } from '../../usecases/image-error';
 
 export const getGenerationErrorMessage = (error: unknown): string | undefined => {
   if (error instanceof ImageStorageError && error.capacityExceeded) {
