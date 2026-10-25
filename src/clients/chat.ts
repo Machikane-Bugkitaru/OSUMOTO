@@ -1,4 +1,4 @@
-import type { Message } from '../conversation';
+import type { Message } from '../services/conversation';
 
 export interface ChatClient {
   reply(messages: Message[]): Promise<string>;

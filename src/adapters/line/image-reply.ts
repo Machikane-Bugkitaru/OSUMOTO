@@ -1,5 +1,5 @@
 import type { ImageMessage, TextMessage } from '@line/bot-sdk';
-import { getGenerationErrorMessage } from '../../generation-error';
+import { getGenerationErrorMessage } from './generation-error';
 
 export const createImageReply =
   (generateArt: (prompt: string) => Promise<string>) =>

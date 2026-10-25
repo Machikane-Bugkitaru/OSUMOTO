@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 require('../helpers.cjs');
-const { createConversationHistory } = require('../../src/conversation');
+const { createConversationHistory } = require('../../src/services/conversation');
 const { createReplyToMessage } = require('../../src/usecases/reply-to-message');
 const { createRememberImage } = require('../../src/usecases/remember-image');
 const { createChatReply } = require('../../src/adapters/line/chat-reply');

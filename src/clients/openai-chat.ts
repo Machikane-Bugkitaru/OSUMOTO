@@ -1,5 +1,5 @@
 import OpenAI, { APIConnectionTimeoutError } from 'openai';
-import { toImageInput } from '../image-input';
+import { toImageInput } from './image-input';
 import { ChatClientError, type ChatClient } from './chat';
 
 interface Config {

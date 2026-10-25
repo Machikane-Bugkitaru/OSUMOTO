@@ -1,10 +1,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { loadModule } = require('./helpers.cjs');
+const { loadLineModule } = require('./line-helpers.cjs');
 
 test('グループの画像受信は履歴へ登録するだけでAPI・返信を呼ばない', async () => {
   const records = [];
-  const { textEventHandler } = loadModule('line.ts', {
+  const { textEventHandler } = loadLineModule({
     '@line/bot-sdk': {
       Client: class {
         replyMessage() {
@@ -12,7 +12,7 @@ test('グループの画像受信は履歴へ登録するだけでAPI・返信�
         }
       },
     },
-    './gpt': {
+    './bootstrap': {
       ask: () => assert.fail('生成しない'),
       rememberImage: async (...args) => {
         records.push(args);

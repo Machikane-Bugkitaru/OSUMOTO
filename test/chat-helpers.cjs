@@ -7,6 +7,14 @@ function loadChatModule(mocks) {
   });
   const dependencies = {
     './clients/openai-chat': chatClient,
+    './config/chat': {
+      loadChatConfig: () => ({
+        apiKey: 'test-key',
+        model: 'test-model',
+        systemSettings: 'test settings',
+        historyLimit: 10,
+      }),
+    },
     './clients/openai-image': {
       createOpenAIImageClient: () => ({
         preparePrompt: () => {
@@ -20,7 +28,13 @@ function loadChatModule(mocks) {
   };
   if (mocks['./line-image']) dependencies['./line-image'] = mocks['./line-image'];
   const bootstrap = loadModule('bootstrap.ts', dependencies);
-  return loadModule('gpt.ts', { './bootstrap': bootstrap });
+  return bootstrap.createChatServices({
+    readImage:
+      mocks['./line-image']?.readLineImage ??
+      (() => {
+        throw new Error('画像取得を呼んではいけない');
+      }),
+  });
 }
 
 module.exports = { loadChatModule };

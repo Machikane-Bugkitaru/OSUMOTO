@@ -1,5 +1,5 @@
 import type { EasyInputMessage } from 'openai/resources/responses/responses';
-import type { Message } from './conversation';
+import type { Message } from '../services/conversation';
 
 export function toImageInput(messages: Message[]): EasyInputMessage[] {
   return messages

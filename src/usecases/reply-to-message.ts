@@ -1,4 +1,4 @@
-import type { createConversationHistory } from '../conversation';
+import type { createConversationHistory } from '../services/conversation';
 import type { ChatClient } from '../clients/chat';
 
 export type ConversationHistory = ReturnType<typeof createConversationHistory>;

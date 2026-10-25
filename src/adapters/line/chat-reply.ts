@@ -1,6 +1,6 @@
 import type { TextMessage } from '@line/bot-sdk';
 import type { ReplyToMessage } from '../../usecases/reply-to-message';
-import { getGenerationErrorMessage } from '../../generation-error';
+import { getGenerationErrorMessage } from './generation-error';
 
 export const lineReplyInstructions = `返信は Markdown に対応していない LINE のトーク画面に表示されます。以下の形式を守ってください。
 - プレーンテキストで回答し、Markdown の見出し、強調、表、引用、コードブロック、インラインコードは使わないでください。

@@ -8,7 +8,8 @@ import {
 import { load } from 'ts-dotenv';
 import { createChatReply } from './adapters/line/chat-reply';
 import { createImageReply } from './adapters/line/image-reply';
-import { ask, rememberImage } from './gpt';
+import { createChatServices } from './bootstrap';
+import { readLineImage } from './line-image';
 import { generateArt } from './image';
 
 const env = load({
@@ -24,6 +25,7 @@ const lineBotConfig = {
 };
 const channelBotName = env.CHANNEL_BOT_NAME || 'BOT';
 
+const { ask, rememberImage } = createChatServices({ readImage: readLineImage });
 const lineClient = new Client(lineBotConfig);
 const groupMemberMap = new Map<string, string>();
 const useImageGeneration = createImageReply(generateArt);
@@ -87,4 +89,4 @@ const extractSenderName = async (userId: string, groupId: string) => {
   return groupMemberMap.get(userId);
 };
 
-export { lineBotConfig, textEventHandler };
+export { lineBotConfig, textEventHandler, ask };

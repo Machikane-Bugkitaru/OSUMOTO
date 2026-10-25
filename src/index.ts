@@ -1,9 +1,8 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import { middleware, WebhookEvent, SignatureValidationFailed, JSONParseError } from '@line/bot-sdk';
-import { lineBotConfig, textEventHandler } from './line';
+import { lineBotConfig, textEventHandler, ask } from './line';
 
 import { load } from 'ts-dotenv';
-import { ask } from './gpt';
 import { checkGenerateArt } from './image';
 import { createEventDeduplicator } from './deduplication';
 const env = load({

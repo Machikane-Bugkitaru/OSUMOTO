@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 require('ts-node/register/transpile-only');
-const { createConversationHistory } = require('../src/conversation');
+const { createConversationHistory } = require('../../src/services/conversation');
 
 test('グループごとに会話履歴を分離する', async () => {
   const ask = createConversationHistory({ limit: 10 });
@@ -230,7 +230,7 @@ test('プロセス全体の画像保持容量を超えると参照を解放し�
       false,
     );
     assert.equal(messages[0].content, '[画像]');
-    const { toImageInput } = require('../src/image-input');
+    const { toImageInput } = require('../../src/clients/image-input');
     assert.deepEqual(toImageInput(messages), [{ role: 'user', content: '質問' }]);
     return '回答';
   });
