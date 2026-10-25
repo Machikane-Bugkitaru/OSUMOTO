@@ -11,14 +11,10 @@ interface Dependencies {
   checkGenerateArt: (prompt: string) => Promise<string>;
 }
 
-export const createHttpApp = ({
-  lineBotConfig,
-  textEventHandler,
-  local,
-  ask,
-  checkGenerateArt,
-}: Dependencies): Application => {
-  const app: Application = express();
+export const createHttpApp = (
+  { lineBotConfig, textEventHandler, local, ask, checkGenerateArt }: Dependencies,
+  app: Application = express(),
+): Application => {
   const processOnce = createEventDeduplicator();
 
   // ローカルのみ有効

@@ -1,3 +1,4 @@
+import type { Application } from 'express';
 import { loadLineConfig } from './config/line';
 import { loadServerConfig } from './config/server';
 import { createLineClient } from './clients/line';
@@ -45,7 +46,7 @@ export const createChatServices = ({
   return { ask, rememberImage };
 };
 
-export const createApplication = () => {
+export const createApplication = (app?: Application) => {
   const lineConfig = loadLineConfig();
   const serverConfig = loadServerConfig();
   const lineBotConfig = {
@@ -64,13 +65,16 @@ export const createApplication = () => {
     lineClient,
   });
   return {
-    app: createHttpApp({
-      lineBotConfig,
-      textEventHandler,
-      ...serverConfig,
-      ask: chat.ask,
-      checkGenerateArt: createCheckGenerateArt(createImageStorageClient(loadImageStorageConfig)),
-    }),
+    app: createHttpApp(
+      {
+        lineBotConfig,
+        textEventHandler,
+        ...serverConfig,
+        ask: chat.ask,
+        checkGenerateArt: createCheckGenerateArt(createImageStorageClient(loadImageStorageConfig)),
+      },
+      app,
+    ),
     port: serverConfig.port,
   };
 };
