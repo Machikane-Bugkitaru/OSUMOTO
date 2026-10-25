@@ -1,14 +1,20 @@
 const { loadModule } = require('./helpers.cjs');
 
 function loadLineModule(mocks) {
-  return loadModule('line.ts', {
-    ...mocks,
-    './bootstrap': { createChatServices: () => mocks['./bootstrap'] },
-    './line-image': {
-      readLineImage: () => {
-        throw new Error('画像取得を呼んではいけない');
-      },
-    },
+  const { createLineClient } = loadModule('clients/line.ts', {
+    '@line/bot-sdk': mocks['@line/bot-sdk'],
   });
+  const { createLineEventHandler } = loadModule('adapters/line/event-handler.ts', {});
+  return {
+    textEventHandler: createLineEventHandler({
+      botName: 'BOT',
+      ...mocks['./bootstrap'],
+      generateArt: mocks['./image'].generateArt,
+      lineClient: createLineClient({
+        channelAccessToken: 'test-token',
+        channelSecret: 'test-secret',
+      }),
+    }),
+  };
 }
 module.exports = { loadLineModule };

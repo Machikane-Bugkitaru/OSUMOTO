@@ -23,9 +23,16 @@ function imageModule(
       },
     },
   });
-  const { imageStorageClient } = loadModule('clients/image-storage.ts', {
-    '../google': { uploadImage: upload },
-  });
+  const { ImageStorageError } = require('../src/clients/image-generation');
+  const imageStorageClient = {
+    storeImage: async (...args) => {
+      try {
+        return await upload(...args);
+      } catch (error) {
+        throw new ImageStorageError(error);
+      }
+    },
+  };
   const { createGenerateImage } = require('../src/usecases/generate-image');
   return {
     generateArt: createGenerateImage({
@@ -139,7 +146,7 @@ test('API エラーを画像データとして保存しない', async () => {
     () => assert.fail('保存してはいけない'),
   );
   await assert.rejects(generateArt('猫'), (actual) => {
-    const { ImageClientError } = require('../src/image-error');
+    const { ImageClientError } = require('../src/clients/image-generation');
     return actual instanceof ImageClientError && actual.code === undefined;
   });
 });
@@ -168,13 +175,13 @@ for (const stage of ['generation', 'storage']) {
     try {
       await assert.rejects(generateArt('secret-prompt'), (actual) => {
         if (stage === 'generation') {
-          const { ImageClientError } = require('../src/image-error');
+          const { ImageClientError } = require('../src/clients/image-generation');
           assert.ok(actual instanceof ImageClientError);
           assert.equal(actual.code, 'moderation_blocked');
           assert.doesNotMatch(JSON.stringify(actual), /secret-/);
           return true;
         }
-        const { ImageStorageError } = require('../src/image-error');
+        const { ImageStorageError } = require('../src/clients/image-generation');
         assert.ok(actual instanceof ImageStorageError);
         assert.equal(actual.capacityExceeded, false);
         assert.doesNotMatch(JSON.stringify(actual), /secret-/);

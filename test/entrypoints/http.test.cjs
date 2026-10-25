@@ -1,16 +1,16 @@
 const assert = require('node:assert/strict');
 const { createHmac } = require('node:crypto');
 const test = require('node:test');
-const { loadModule } = require('./helpers.cjs');
+const { loadModule } = require('../helpers.cjs');
 
 async function withServer(handler, run) {
-  const { app } = loadModule('index.ts', {
-    './line': {
-      lineBotConfig: { channelAccessToken: 'test-token', channelSecret: 'test-secret' },
-      textEventHandler: handler,
-      ask: () => assert.fail('チャットAPIを呼んではいけない'),
-    },
-    './image': { checkGenerateArt: () => assert.fail('画像APIを呼んではいけない') },
+  const { createHttpApp } = loadModule('entrypoints/http.ts', {});
+  const app = createHttpApp({
+    lineBotConfig: { channelAccessToken: 'test-token', channelSecret: 'test-secret' },
+    textEventHandler: handler,
+    local: false,
+    ask: () => assert.fail('チャットAPIを呼んではいけない'),
+    checkGenerateArt: () => assert.fail('画像APIを呼んではいけない'),
   });
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));

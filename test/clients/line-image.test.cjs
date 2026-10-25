@@ -1,12 +1,16 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { loadModule } = require('./helpers.cjs');
+const { loadModule } = require('../helpers.cjs');
 
 async function withFetch(fetch, run) {
   const original = global.fetch;
   global.fetch = fetch;
   try {
-    await run(loadModule('line-image.ts', {}));
+    const client = loadModule('clients/line-image.ts', {});
+    await run({
+      ...client,
+      readLineImage: client.createReadLineImage({ accessToken: 'test-token' }),
+    });
   } finally {
     global.fetch = original;
   }
