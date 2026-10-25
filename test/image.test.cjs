@@ -329,17 +329,19 @@ test('生成画像データが空の場合もAIを呼び直さず固定返信す
   });
 });
 
-test('OpenAIのタイムアウトでは再試行を案内する専用の返信を返す', async () => {
+test('プロンプト準備のSDKタイムアウトを正規化して専用の返信を返す', async () => {
   const { APIConnectionTimeoutError } = require('openai');
-  let reply;
-  const { textEventHandler } = lineModule(
+  const { generateArt } = imageModule(
+    () => assert.fail('生成してはいけない'),
+    () => assert.fail('保存してはいけない'),
     async () => {
       throw new APIConnectionTimeoutError();
     },
-    async (_, message) => {
-      reply = message;
-    },
   );
+  let reply;
+  const { textEventHandler } = lineModule(generateArt, async (_, message) => {
+    reply = message;
+  });
   await textEventHandler(event('BOT画伯 猫'));
   assert.deepEqual(reply, {
     type: 'text',
