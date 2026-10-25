@@ -30,6 +30,8 @@ yarn deploy:prod       # Build and deploy to Vercel production
 
 ## Architecture
 
+See [the layer design and feature placement guide](docs/architecture/README.md) for dependency rules, injection, tests, and the current image-generation scope.
+
 ### Entry Point and Request Flow
 
 - **[src/index.ts](src/index.ts)** - Express server setup with three endpoints:
@@ -58,7 +60,10 @@ yarn deploy:prod       # Build and deploy to Vercel production
 - `rememberImage(groupId, imageId)` loads and records a received LINE image in process memory without replying
 - `src/line-image.ts` retrieves images once at reception (10s / 8MiB each), and `src/image-input.ts` builds multimodal input from memory; total retained data URLs are capped at 64MiB
 
-**[src/image.ts](src/image.ts)** - OpenAI image generation integration
+**[src/image.ts](src/image.ts)** - Image generation public API and local sample upload
+
+- `src/bootstrap.ts` wires image config, clients, and `src/usecases/generate-image.ts`; `src/adapters/line/image-reply.ts` converts results to LINE replies
+- OpenAI communication lives in `src/clients/openai-image.ts`; `src/clients/image-storage.ts` reuses the existing Drive transport
 
 - Uses `images.generate()` with `OPENAI_IMAGE_MODEL` (default: `gpt-image-2.5-flare`)
 - Generates one 1024x1024 PNG at `low` quality using the existing `OPENAI_API_KEY`

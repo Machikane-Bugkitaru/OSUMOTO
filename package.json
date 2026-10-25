@@ -8,7 +8,7 @@
     "build": "rimraf dist && tsc",
     "ts-check": "tsc --project tsconfig.json --noEmit",
     "deploy:prod": "rimraf dist && tsc && vercel --prod",
-    "test": "node --test test/*.test.cjs",
+    "test": "node --test 'test/**/*.test.cjs'",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
